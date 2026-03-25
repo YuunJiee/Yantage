@@ -40,8 +40,9 @@ def reconnect():
         engine.dispose()
         engine = get_engine()
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        # Ensure tables exist for the new DB
-        Base.metadata.create_all(bind=engine)
+        # Apply migrations for the new profile's DB
+        from . import migrations as db_migrations
+        db_migrations.run_migrations()
 
 # Dependency
 def get_db():
