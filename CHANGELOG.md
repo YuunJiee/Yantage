@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2026-03-25
+
+### ♻️ Refactored
+
+- **SSE replaces WebSocket** for real-time price push notifications
+  - Replaced `routers/ws.py` with `routers/sse.py` — SSE is semantically correct for one-way server push; browser `EventSource` API handles reconnection natively
+  - Removed manual exponential-backoff retry logic from `frontend/lib/hooks.ts` (~30 lines deleted)
+  - Backend broadcasts `{"type":"prices_updated"}` to all connected clients via per-connection `asyncio.Queue` with 30-second keepalive comments to prevent proxy timeouts
+  - Frontend `useRealtimeUpdates()` hook migrated from `WebSocket` to `EventSource`
+
+- **Alembic replaces hand-rolled migrations**
+  - Added `alembic.ini`, `alembic/env.py` (dynamic URL via `profile_manager`), and `alembic/script.py.mako`
+  - `0001_initial_schema`: `create_all(checkfirst=True)` — safe on both fresh and existing databases
+  - `0002_add_missing_columns`: idempotent column-existence checks replace the `_run_migrations()` try/except blocks in `main.py`
+  - Added `migrations.py` as single programmatic entry point called at startup and on profile switch
+  - Future schema changes use `alembic revision -m "..."` for versioned, trackable migrations
+
+### 🗑️ Removed
+
+- `backend/routers/ws.py` — replaced by SSE
+- `backend/seed.py` — test data script, no longer needed
+- `backend/fix_category.py`, `backend/fix_db.py` — superseded by `_run_migrations()` (now Alembic)
+- `backend/seed_university_student.py` — test seed with `drop_all`, unsafe to keep in repo
+- `backend/routers/expenses.py` — router was never registered in `main.py` (dead code)
+
+### ⚙️ DevOps
+
+- `backend/Dockerfile`: added `--timeout=120` to `pip install` to handle slow PyPI connections
+
+---
+
 ## [2.6.0] - 2026-03-03
 
 ### ✨ Added
