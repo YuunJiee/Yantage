@@ -162,10 +162,10 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between px-4 py-3">
                         <p className="text-sm font-medium">備份資料</p>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={handleExport}>
+                            <Button variant="outline" onClick={handleExport}>
                                 <Download className="w-3.5 h-3.5 mr-1.5" /> JSON
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => window.open(`${API_URL}/system/export/csv`, '_blank')}>
+                            <Button variant="outline" onClick={() => window.open(`${API_URL}/system/export/csv`, '_blank')}>
                                 <Download className="w-3.5 h-3.5 mr-1.5" /> CSV
                             </Button>
                         </div>
@@ -175,7 +175,7 @@ export default function SettingsPage() {
                             <p className="text-sm font-medium text-red-500">系統重置</p>
                             <p className="text-xs text-muted-foreground mt-0.5">刪除所有資產、交易紀錄和目標</p>
                         </div>
-                        <Button variant="destructive" size="sm" onClick={handleReset}>
+                        <Button variant="destructive" onClick={handleReset}>
                             <Trash2 className="w-3.5 h-3.5 mr-1.5" /> 重置
                         </Button>
                     </div>

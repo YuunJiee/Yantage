@@ -188,7 +188,7 @@ export default function BudgetPage() {
                     {incomeItems.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center">
                             <p className="text-sm text-muted-foreground mb-3">尚未設定預期收入</p>
-                            <Button variant="outline" size="sm" onClick={() => { setEditingIncomeItem(null); setIsIncomeDialogOpen(true); }}>新增收入</Button>
+                            <Button variant="outline" onClick={() => { setEditingIncomeItem(null); setIsIncomeDialogOpen(true); }}>新增收入</Button>
                         </div>
                     ) : (
                         <div className="rounded-2xl border border-border bg-card divide-y divide-border/50">
@@ -217,7 +217,7 @@ export default function BudgetPage() {
                     {categories.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-border px-4 py-12 text-center">
                             <p className="text-sm text-muted-foreground mb-3">尚無預算類別</p>
-                            <Button variant="outline" size="sm" onClick={openAddBudget}>新增第一筆預算</Button>
+                            <Button variant="outline" onClick={openAddBudget}>新增第一筆預算</Button>
                         </div>
                     ) : (
                         <div className="space-y-8">
@@ -336,7 +336,7 @@ export default function BudgetPage() {
 
                             <div className="flex gap-3 pt-2">
                                 {editingBudgetId && (
-                                    <Button type="button" variant="destructive" size="sm" className="shrink-0 px-3" onClick={handleBudgetDelete}>
+                                    <Button type="button" variant="destructive" className="shrink-0 px-3" onClick={handleBudgetDelete}>
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
                                 )}
