@@ -54,7 +54,7 @@ export default function BudgetPage() {
         e.preventDefault();
         const payload = { name: budgetForm.name, icon: budgetForm.icon || null, budget_amount: parseFloat(budgetForm.budget_amount), color: budgetForm.color || null, note: budgetForm.note || null, group_name: budgetForm.group_name || 'Unassigned' };
         try {
-            const url = editingBudgetId ? `${API_URL}/budgets/${editingBudgetId}` : `${API_URL}/budgets/`;
+            const url = editingBudgetId ? `${API_URL}/budgets/categories/${editingBudgetId}` : `${API_URL}/budgets/categories`;
             await fetch(url, { method: editingBudgetId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             setIsBudgetDialogOpen(false);
             refreshBudgets();
@@ -63,7 +63,7 @@ export default function BudgetPage() {
 
     const handleBudgetDelete = async () => {
         if (!editingBudgetId || !confirm('確定要刪除此預算類別嗎？')) return;
-        await fetch(`${API_URL}/budgets/${editingBudgetId}`, { method: 'DELETE' });
+        await fetch(`${API_URL}/budgets/categories/${editingBudgetId}`, { method: 'DELETE' });
         setIsBudgetDialogOpen(false);
         refreshBudgets();
     };
