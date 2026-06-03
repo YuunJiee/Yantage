@@ -1,20 +1,19 @@
 'use client';
 
 import { useRiskMetrics } from '@/lib/hooks';
-import { Activity, ShieldAlert, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useLanguage } from '@/components/LanguageProvider';
-import type { TranslationKey } from '@/src/i18n/dictionaries';
 
 export function RiskMetricsWidget() {
     const { metrics, isLoading: loading } = useRiskMetrics();
-    const { t, language } = useLanguage();
 
     if (loading) {
         return (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-3 gap-0 divide-x divide-border/40 animate-pulse">
                 {[1, 2, 3].map(i => (
-                    <div key={i} className="bg-card rounded-3xl p-6 border border-border/60 animate-pulse h-[140px]" />
+                    <div key={i} className="px-4 first:pl-0 last:pr-0 space-y-1.5">
+                        <div className="h-7 w-16 bg-muted rounded" />
+                        <div className="h-3 w-12 bg-muted/60 rounded" />
+                    </div>
                 ))}
             </div>
         );
@@ -22,113 +21,50 @@ export function RiskMetricsWidget() {
 
     if (!metrics) return null;
 
-    // Translation helpers for statuses
-    // For English they match exactly. For zh-TW we'll need to add to translations.
-    // Let's use generic strings for now and fallback to english status if translation is missing.
-    const translateStatus = (s: string) => {
-        const key = `status_${s.toLowerCase().replace(' ', '_')}`;
-        const translated = t(key as TranslationKey);
-        return translated === key ? s : translated;
+    const STATUS_ZH: Record<string, string> = {
+        Excellent: '極佳', Healthy: '穩健', Slow: '緩慢', Declining: '衰退',
+        Safe: '安全', Correction: '回調', 'Heavy Loss': '重挫',
+        Stable: '穩定', Moderate: '中等', 'High Risk': '高風險', 'N/A': '—'
     };
 
-    const getStatusColor = (metric: string, status: string) => {
+    const getColor = (metric: 'cagr' | 'dd' | 'vol', status: string) => {
         if (status === 'N/A') return 'text-muted-foreground';
-
-        if (metric === 'cagr') {
-            if (status === 'Excellent' || status === 'Healthy') return 'text-green-500';
-            if (status === 'Slow') return 'text-yellow-500';
-            return 'text-red-500';
-        }
-
-        if (metric === 'dd') {
-            if (status === 'Safe') return 'text-green-500';
-            if (status === 'Correction') return 'text-yellow-500';
-            return 'text-red-500';
-        }
-
-        if (metric === 'vol') {
-            if (status === 'Stable') return 'text-green-500';
-            if (status === 'Moderate') return 'text-yellow-500';
-            return 'text-red-500';
-        }
-
-        return 'text-primary';
+        if (metric === 'cagr') return (status === 'Excellent' || status === 'Healthy') ? 'text-emerald-600' : status === 'Slow' ? 'text-amber-500' : 'text-red-500';
+        if (metric === 'dd') return status === 'Safe' ? 'text-emerald-600' : status === 'Correction' ? 'text-amber-500' : 'text-red-500';
+        if (metric === 'vol') return status === 'Stable' ? 'text-emerald-600' : status === 'Moderate' ? 'text-amber-500' : 'text-red-500';
+        return 'text-muted-foreground';
     };
 
-    const cagrColor = getStatusColor('cagr', metrics.cagr.status);
-    const ddColor = getStatusColor('dd', metrics.maxDrawdown.status);
-    const volColor = getStatusColor('vol', metrics.volatility.status);
+    const items = [
+        {
+            label: '年化報酬率',
+            value: metrics.cagr.status === 'N/A' ? '--' : `${metrics.cagr.value.toFixed(1)}%`,
+            status: STATUS_ZH[metrics.cagr.status] ?? metrics.cagr.status,
+            color: getColor('cagr', metrics.cagr.status),
+        },
+        {
+            label: '最大回撤',
+            value: metrics.maxDrawdown.status === 'N/A' ? '--' : `-${metrics.maxDrawdown.value.toFixed(1)}%`,
+            status: STATUS_ZH[metrics.maxDrawdown.status] ?? metrics.maxDrawdown.status,
+            color: getColor('dd', metrics.maxDrawdown.status),
+        },
+        {
+            label: '年化波動率',
+            value: metrics.volatility.status === 'N/A' ? '--' : `${metrics.volatility.value.toFixed(1)}%`,
+            status: STATUS_ZH[metrics.volatility.status] ?? metrics.volatility.status,
+            color: getColor('vol', metrics.volatility.status),
+        },
+    ];
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {/* CAGR Card */}
-            <div className="bg-card rounded-3xl p-6 border border-border/60 shadow-sm flex flex-col justify-between group transition-all hover:border-primary/50 hover:shadow-md">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <div className="bg-primary/10 p-2 rounded-xl">
-                            <TrendingUp className="w-5 h-5 text-primary" />
-                        </div>
-                        <h3 className="font-bold text-foreground">CAGR</h3>
-                    </div>
+        <div className="grid grid-cols-3 divide-x divide-border/50">
+            {items.map(({ label, value, status, color }) => (
+                <div key={label} className="px-4 first:pl-0 last:pr-0">
+                    <div className="text-2xl font-bold tracking-tight tabular-nums">{value}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
+                    <div className={cn('text-xs font-medium mt-1', color)}>{status}</div>
                 </div>
-                <div>
-                    <div className="text-3xl font-bold tracking-tight mb-1">
-                        {metrics.cagr.status === 'N/A' ? '--' : `${metrics.cagr.value.toFixed(1)}%`}
-                    </div>
-                    <div className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                        <span>{t('compound_growth')}</span>
-                        <span className={cn("px-2 py-0.5 rounded-full text-xs font-bold", cagrColor.replace('text-', 'bg-').replace('500', '500/10'), cagrColor)}>
-                            {translateStatus(metrics.cagr.status)}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Max Drawdown Card */}
-            <div className="bg-card rounded-3xl p-6 border border-border/60 shadow-sm flex flex-col justify-between group transition-all hover:border-primary/50 hover:shadow-md">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <div className="bg-primary/10 p-2 rounded-xl">
-                            <ShieldAlert className="w-5 h-5 text-primary" />
-                        </div>
-                        <h3 className="font-bold text-foreground">Max Drawdown</h3>
-                    </div>
-                </div>
-                <div>
-                    <div className="text-3xl font-bold tracking-tight mb-1">
-                        {metrics.maxDrawdown.status === 'N/A' ? '--' : `-${metrics.maxDrawdown.value.toFixed(1)}%`}
-                    </div>
-                    <div className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                        <span>{t('max_drawdown')}</span>
-                        <span className={cn("px-2 py-0.5 rounded-full text-xs font-bold", ddColor.replace('text-', 'bg-').replace('500', '500/10'), ddColor)}>
-                            {translateStatus(metrics.maxDrawdown.status)}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Volatility Card */}
-            <div className="bg-card rounded-3xl p-6 border border-border/60 shadow-sm flex flex-col justify-between group transition-all hover:border-primary/50 hover:shadow-md">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <div className="bg-primary/10 p-2 rounded-xl">
-                            <Activity className="w-5 h-5 text-primary" />
-                        </div>
-                        <h3 className="font-bold text-foreground">Volatility</h3>
-                    </div>
-                </div>
-                <div>
-                    <div className="text-3xl font-bold tracking-tight mb-1">
-                        {metrics.volatility.status === 'N/A' ? '--' : `${metrics.volatility.value.toFixed(1)}%`}
-                    </div>
-                    <div className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                        <span>{t('annual_volatility')}</span>
-                        <span className={cn("px-2 py-0.5 rounded-full text-xs font-bold", volColor.replace('text-', 'bg-').replace('500', '500/10'), volColor)}>
-                            {translateStatus(metrics.volatility.status)}
-                        </span>
-                    </div>
-                </div>
-            </div>
+            ))}
         </div>
     );
 }

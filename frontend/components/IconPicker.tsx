@@ -63,7 +63,7 @@ export function IconPicker({ value, onChange, className, iconClassName, defaultI
                 </div>
                 <div className="grid grid-cols-6 gap-2 max-h-[200px] overflow-y-auto scrollbar-thin">
                     {filteredIcons.map(name => {
-                        const Icon = (Icons as any)[name];
+                        const Icon = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[name];
                         if (!Icon) return null;
 
                         const isSelected = selectedIcon === name;
@@ -123,7 +123,7 @@ export function getDefaultIcon(category: string, subCategory: string = ''): stri
 
 export function AssetIcon({ icon, className }: { icon?: string | null, className?: string }) {
     if (!icon) return null;
-    const Icon = (Icons as any)[icon];
+    const Icon = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[icon];
     if (!Icon) return null;
     return <Icon className={className} />;
 }

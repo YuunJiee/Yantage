@@ -2,7 +2,6 @@
 
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import { PieChart as PieChartIcon } from 'lucide-react';
-import { useLanguage } from "@/components/LanguageProvider";
 import { usePrivacy } from "@/components/PrivacyProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -29,7 +28,6 @@ interface AssetPieChartProps {
 
 export function AssetPieChart({ data, themeName = 'Classic' }: AssetPieChartProps) {
     const { isPrivacyMode } = usePrivacy();
-    const { t } = useLanguage();
 
     const colors = CHART_THEMES[themeName] || CHART_THEMES[DEFAULT_THEME];
 
@@ -41,7 +39,7 @@ export function AssetPieChart({ data, themeName = 'Classic' }: AssetPieChartProp
             <CardHeader className="pb-0">
                 <CardTitle className="text-xl font-bold flex items-center gap-2">
                     <PieChartIcon className="w-5 h-5 text-muted-foreground" />
-                    {t('top_assets')}
+                    前幾大資產
                 </CardTitle>
             </CardHeader>
             <CardContent>
@@ -89,7 +87,7 @@ export function AssetPieChart({ data, themeName = 'Classic' }: AssetPieChartProp
                                 </Pie>
                                 <Tooltip
                                     formatter={(value, name) => {
-                                        if (isPrivacyMode) return ['****', String(name ?? '')];
+                                        if (isPrivacyMode) return ['••••', String(name ?? '')];
                                         const v = Number(value ?? 0);
                                         const percent = totalValue ? ((v / totalValue) * 100).toFixed(1) : 0;
                                         return [
@@ -105,7 +103,7 @@ export function AssetPieChart({ data, themeName = 'Classic' }: AssetPieChartProp
                     ) : (
                         <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground gap-2">
                             <PieChartIcon className="w-8 h-8 opacity-20" />
-                            <span className="text-sm">{t('no_data')}</span>
+                            <span className="text-sm">尚無資料</span>
                         </div>
                     )}
                 </div>

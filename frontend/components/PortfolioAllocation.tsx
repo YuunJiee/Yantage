@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePrivacy } from "@/components/PrivacyProvider";
-import { useLanguage } from "@/components/LanguageProvider";
 import { ChartPie, Layers } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import type { Asset } from "@/lib/types";
@@ -20,7 +19,6 @@ interface PortfolioAllocationProps {
 }
 
 export function PortfolioAllocation({ assets, title, showToggle = true, defaultTab = 'Asset' }: PortfolioAllocationProps) {
-    const { t } = useLanguage();
     const { isPrivacyMode } = usePrivacy();
     const [viewMode, setViewMode] = useState<'Asset' | 'Platform'>(defaultTab);
 
@@ -75,7 +73,7 @@ export function PortfolioAllocation({ assets, title, showToggle = true, defaultT
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg md:text-xl font-bold flex items-center gap-2">
                     {viewMode === 'Asset' ? <ChartPie className="w-5 h-5 text-primary" /> : <Layers className="w-5 h-5 text-primary" />}
-                    {title ? title : (viewMode === 'Asset' ? t('allocation_by_asset') : t('allocation_by_platform'))}
+                    {title ? title : (viewMode === 'Asset' ? '資產配置 (依項目)' : '資產配置 (依平台)')}
                 </CardTitle>
                 {showToggle && (
                     <div className="flex bg-muted p-1 rounded-lg">
@@ -86,7 +84,7 @@ export function PortfolioAllocation({ assets, title, showToggle = true, defaultT
                                 viewMode === 'Asset' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
-                            {t('asset') || "Asset"}
+                            資產
                         </button>
                         <button
                             onClick={() => setViewMode('Platform')}
@@ -95,7 +93,7 @@ export function PortfolioAllocation({ assets, title, showToggle = true, defaultT
                                 viewMode === 'Platform' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
-                            {t('platform') || "Platform"}
+                            平台
                         </button>
                     </div>
                 )}
@@ -105,7 +103,7 @@ export function PortfolioAllocation({ assets, title, showToggle = true, defaultT
                     {totalValue === 0 ? (
                         <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground gap-2">
                             <ChartPie className="w-8 h-8 opacity-20" />
-                            <span className="text-sm">{t('no_data')}</span>
+                            <span className="text-sm">尚無資料</span>
                         </div>
                     ) : (
                         <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
@@ -129,11 +127,12 @@ export function PortfolioAllocation({ assets, title, showToggle = true, defaultT
                                     ))}
                                 </Pie>
                                 <Tooltip
-                                    formatter={(value: any, name: any) => {
-                                        if (isPrivacyMode) return ['****', name];
-                                        const percent = totalValue ? (value / totalValue * 100).toFixed(1) : 0;
+                                    formatter={(value: number | undefined, name: string | undefined) => {
+                                        if (isPrivacyMode) return ['••••', name];
+                                        const v = value ?? 0;
+                                        const percent = totalValue ? (v / totalValue * 100).toFixed(1) : 0;
                                         return [
-                                            `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value)} (${percent}%)`,
+                                            `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v)} (${percent}%)`,
                                             name
                                         ];
                                     }}

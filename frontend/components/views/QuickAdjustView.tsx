@@ -1,9 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useLanguage } from '@/components/LanguageProvider';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createTransaction } from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -20,7 +18,6 @@ interface QuickAdjustViewProps {
 
 export function QuickAdjustView({ asset, onClose, onBack }: QuickAdjustViewProps) {
     const router = useRouter();
-    const { t } = useLanguage();
     const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<'set' | 'adjust'>('set');
     const [value, setValue] = useState('');
@@ -68,32 +65,32 @@ export function QuickAdjustView({ asset, onClose, onBack }: QuickAdjustViewProps
             <form onSubmit={handleSubmit} className="space-y-6">
 
                 {/* Mode Toggle */}
-                <div className="flex bg-muted p-1 rounded-xl">
+                <div className="flex gap-4 border-b border-border/50 pb-3">
                     <button
                         type="button"
-                        className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-all ${mode === 'set' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                        className={`text-sm font-medium transition-colors pb-0.5 ${mode === 'set' ? 'text-foreground border-b-2 border-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                         onClick={() => { setMode('set'); setValue(''); }}
                     >
-                        {t('set_final_balance')}
+                        設定最終餘額
                     </button>
                     <button
                         type="button"
-                        className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-all ${mode === 'adjust' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                        className={`text-sm font-medium transition-colors pb-0.5 ${mode === 'adjust' ? 'text-foreground border-b-2 border-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                         onClick={() => { setMode('adjust'); setValue(''); }}
                     >
-                        {t('adjust_plus_minus')}
+                        增減金額 (+/-)
                     </button>
                 </div>
 
                 <div className="space-y-4">
                     <div className="text-center">
-                        <div className="text-sm text-muted-foreground mb-1">{t('current_balance')}</div>
+                        <div className="text-sm text-muted-foreground mb-1">目前餘額</div>
                         <div className="text-3xl font-bold font-mono">${currentBalance.toLocaleString()}</div>
                     </div>
 
                     <div className="space-y-2">
                         <Label>
-                            {mode === 'set' ? t('new_balance') : t('amount_to_add_sub')}
+                            {mode === 'set' ? '新餘額' : '增減金額'}
                         </Label>
                         <MoneyInput
                             autoFocus
@@ -119,13 +116,13 @@ export function QuickAdjustView({ asset, onClose, onBack }: QuickAdjustViewProps
                 <div className="flex justify-between pt-2">
                     {onBack && (
                         <Button type="button" variant="ghost" onClick={onBack}>
-                            <ArrowLeft className="w-4 h-4 mr-1" /> {t('back')}
+                            <ArrowLeft className="w-4 h-4 mr-1" /> 返回
                         </Button>
                     )}
                     <div className="flex gap-2 ml-auto">
                         {/* <Button type="button" variant="ghost" onClick={onClose}>{t('cancel')}</Button> */}
                         <Button type="submit" disabled={loading || !value}>
-                            {loading ? t('loading') : t('confirm')}
+                            {loading ? '載入中...' : '確認'}
                         </Button>
                     </div>
                 </div>

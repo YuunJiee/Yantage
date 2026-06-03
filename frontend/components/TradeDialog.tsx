@@ -3,12 +3,9 @@
 import { useState } from 'react';
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CustomSelect } from "@/components/ui/custom-select"; // If needed, or use Tabs
 import { createTransaction } from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { useLanguage } from '@/components/LanguageProvider';
 import { useToast } from '@/components/ui/toast';
 import { MoneyInput } from '@/components/ui/MoneyInput';
 import type { Asset } from '@/lib/types';
@@ -21,7 +18,6 @@ interface TradeDialogProps {
 }
 
 export function TradeDialog({ isOpen, onClose, asset, onSuccess }: TradeDialogProps) {
-    const { t } = useLanguage();
     const router = useRouter();
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
@@ -30,7 +26,6 @@ export function TradeDialog({ isOpen, onClose, asset, onSuccess }: TradeDialogPr
     // Form State
     const [quantity, setQuantity] = useState('');
     const [price, setPrice] = useState('');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]); // Default today
 
     // Initialize price with current asset price if available
     // But only on open? Handled by user input usually.
@@ -45,7 +40,7 @@ export function TradeDialog({ isOpen, onClose, asset, onSuccess }: TradeDialogPr
             const p = parseFloat(price);
 
             if (isNaN(qty) || isNaN(p) || qty <= 0) {
-                toast(t('invalid_qty_price'), 'error');
+                toast('數量或價格無效', 'error');
                 setLoading(false);
                 return;
             }
@@ -62,13 +57,13 @@ export function TradeDialog({ isOpen, onClose, asset, onSuccess }: TradeDialogPr
             if (onSuccess) onSuccess();
             router.refresh();
             onClose();
-            toast(t('trade_success') || `${mode === 'buy' ? 'Buy' : 'Sell'} order recorded`, 'success');
+            toast('交易已記錄', 'success');
             // Reset form
             setQuantity('');
             setPrice('');
         } catch (error) {
             console.error("Trade failed", error);
-            toast(t('trade_failed'), 'error');
+            toast('交易失敗', 'error');
         } finally {
             setLoading(false);
         }
@@ -79,7 +74,7 @@ export function TradeDialog({ isOpen, onClose, asset, onSuccess }: TradeDialogPr
     const total = (parseFloat(quantity) || 0) * (parseFloat(price) || 0);
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title={`${t('trade')} ${asset.ticker || asset.name}`}>
+        <Dialog isOpen={isOpen} onClose={onClose} title={`交易 ${asset.ticker || asset.name}`}>
             <div className="flex gap-2 mb-6 bg-muted p-1 rounded-xl">
                 <button
                     type="button"
@@ -89,7 +84,7 @@ export function TradeDialog({ isOpen, onClose, asset, onSuccess }: TradeDialogPr
                         : 'text-muted-foreground hover:text-foreground'
                         }`}
                 >
-                    {t('buy')}
+                    增加
                 </button>
                 <button
                     type="button"
@@ -99,13 +94,13 @@ export function TradeDialog({ isOpen, onClose, asset, onSuccess }: TradeDialogPr
                         : 'text-muted-foreground hover:text-foreground'
                         }`}
                 >
-                    {t('sell')}
+                    減少
                 </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                    <Label className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">{t('price_unit')}</Label>
+                    <Label className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">單價</Label>
                     <MoneyInput
                         placeholder={asset.current_price?.toString()}
                         value={price}
@@ -116,7 +111,7 @@ export function TradeDialog({ isOpen, onClose, asset, onSuccess }: TradeDialogPr
                 </div>
 
                 <div className="space-y-2">
-                    <Label className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">{t('quantity')}</Label>
+                    <Label className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">數量</Label>
                     <MoneyInput
                         placeholder="0.00"
                         value={quantity}
@@ -127,7 +122,7 @@ export function TradeDialog({ isOpen, onClose, asset, onSuccess }: TradeDialogPr
                 </div>
 
                 <div className="pt-4 border-t border-border flex justify-between items-end">
-                    <Label className="text-base font-medium">{t('total_amount')}</Label>
+                    <Label className="text-base font-medium">總金額</Label>
                     <div className="text-2xl font-bold font-mono">
                         {total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                         <span className="text-sm text-muted-foreground ml-1 font-sans font-normal">
@@ -142,7 +137,7 @@ export function TradeDialog({ isOpen, onClose, asset, onSuccess }: TradeDialogPr
                         className={`w-full h-12 text-lg ${mode === 'buy' ? 'bg-trend-up hover:opacity-90' : 'bg-trend-down hover:opacity-90'}`}
                         disabled={loading}
                     >
-                        {loading ? t('loading') : `${mode === 'buy' ? t('buy') : t('sell')} ${asset.ticker || asset.name}`}
+                        {loading ? '載入中...' : `${mode === 'buy' ? '增加' : '減少'} ${asset.ticker || asset.name}`}
                     </Button>
                 </div>
             </form>

@@ -26,7 +26,7 @@ export async function apiFetch<T = unknown>(
     const res = await fetch(url, { cache: 'no-store', ...init });
     if (!res.ok) {
         let detail = '';
-        try { detail = (await res.text()).slice(0, 200); } catch (_) { /* ignore */ }
+        try { detail = (await res.text()).slice(0, 200); } catch { /* ignore */ }
         throw new Error(`API ${res.status} [${path}]${detail ? ': ' + detail : ''}`);
     }
     return res.json() as Promise<T>;
@@ -240,7 +240,6 @@ export async function deleteAsset(assetId: number) {
         method: 'DELETE',
     });
     if (!res.ok) throw new Error('Failed to delete asset');
-    return res.json();
 }
 
 export async function updateAsset(assetId: number, assetData: Partial<Omit<Asset, 'id'>>): Promise<Asset> {
@@ -291,7 +290,6 @@ export async function deleteTransaction(id: number) {
         method: 'DELETE',
     });
     if (!res.ok) throw new Error('Failed to delete transaction');
-    return res.json();
 }
 
 export async function fetchIntegrations() {

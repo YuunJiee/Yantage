@@ -3,12 +3,10 @@
 
 import { useState, useEffect } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { useLanguage } from "@/components/LanguageProvider";
 import { usePrivacy } from "@/components/PrivacyProvider";
 import { fetchAssetHistory } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import type { AssetHistoryPoint } from "@/lib/types";
-import type { TranslationKey } from '@/src/i18n/dictionaries';
 // Assuming native select for simplicity since we don't have Select component handy in context
 // actually we do have Select in ui/select based on IntegrationManager
 
@@ -18,18 +16,16 @@ interface AssetHistoryChartProps {
 }
 
 export function AssetHistoryChart({ assetId, color = "#8884d8" }: AssetHistoryChartProps) {
-    const { t } = useLanguage();
     const { isPrivacyMode } = usePrivacy();
     const [data, setData] = useState<AssetHistoryPoint[]>([]);
     const [loading, setLoading] = useState(true);
     const [range, setRange] = useState('1y');
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true);
         fetchAssetHistory(assetId, range)
-            .then(res => {
-                setData(res);
-            })
+            .then(res => setData(res))
             .catch(err => console.error(err))
             .finally(() => setLoading(false));
     }, [assetId, range]);
@@ -39,7 +35,7 @@ export function AssetHistoryChart({ assetId, color = "#8884d8" }: AssetHistoryCh
     }
 
     if (!data || data.length === 0) {
-        return <div className="h-[200px] w-full flex items-center justify-center text-muted-foreground text-sm">{t('no_data')}</div>;
+        return <div className="h-[200px] w-full flex items-center justify-center text-muted-foreground text-sm">尚無資料</div>;
     }
 
     return (
@@ -55,7 +51,7 @@ export function AssetHistoryChart({ assetId, color = "#8884d8" }: AssetHistoryCh
                                     : "text-muted-foreground hover:text-foreground"
                                 }`}
                         >
-                            {t(`range_${r}` as TranslationKey)}
+                            {r === '30d' ? '30天' : r === '3mo' ? '3個月' : r === '6mo' ? '6個月' : r === '1y' ? '1年' : '全部'}
                         </button>
                     ))}
                 </div>
@@ -91,7 +87,7 @@ export function AssetHistoryChart({ assetId, color = "#8884d8" }: AssetHistoryCh
                         />
                         <Tooltip
                             contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--foreground)' }}
-                            formatter={(value: any) => isPrivacyMode ? '****' : [`$${value}`, 'Value']}
+                            formatter={(value: number | undefined) => isPrivacyMode ? '••••' : [`$${value ?? 0}`, 'Value']}
                             labelFormatter={(label) => new Date(label).toLocaleDateString()}
                         />
                         <Area

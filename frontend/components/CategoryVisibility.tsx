@@ -4,14 +4,16 @@ import { useState, useEffect } from 'react';
 import { Switch } from '@/components/ui/switch'; // Will check if this exists, else fallback
 import { Label } from '@/components/ui/label';
 
-import { useLanguage } from '@/components/LanguageProvider';
 import { fetchSetting, updateSetting } from '@/lib/api';
-import type { TranslationKey } from '@/src/i18n/dictionaries';
 
 const ALL_CATEGORIES = ['Fluid', 'Stock', 'Crypto', 'Fixed', 'Receivables', 'Liabilities'];
 
+const CATEGORY_ZH: Record<string, string> = {
+    'Fluid': '流動資產', 'Stock': '股票', 'Crypto': '加密貨幣',
+    'Fixed': '固定資產', 'Receivables': '應收帳款', 'Liabilities': '負債',
+};
+
 export function CategoryVisibility() {
-    const { t } = useLanguage();
     const [visibility, setVisibility] = useState<Record<string, boolean>>({
         'Fluid': true,
         'Stock': true,
@@ -51,9 +53,9 @@ export function CategoryVisibility() {
         <div className="space-y-4">
             {ALL_CATEGORIES.map(cat => (
                 <div key={cat} className="flex items-center justify-between">
-                    <Label htmlFor={`toggle-${cat}`} className="text-base">{t(cat as TranslationKey)}</Label>
+                    <Label htmlFor={`toggle-${cat}`} className="text-base">{CATEGORY_ZH[cat] ?? cat}</Label>
                     <div className="flex items-center gap-2">
-                        <Label className="text-xs text-muted-foreground">{visibility[cat] ? t('visible') : t('hidden')}</Label>
+                        <Label className="text-xs text-muted-foreground">{visibility[cat] ? '顯示' : '隱藏'}</Label>
                         <Switch
                             id={`toggle-${cat}`}
                             checked={visibility[cat]}

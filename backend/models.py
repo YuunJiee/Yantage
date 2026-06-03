@@ -70,23 +70,6 @@ class Goal(Base):
     allocation_data = Column(String, nullable=True)  # JSON: {"Stock": 60, "Fluid": 40} for ASSET_ALLOCATION
     created_at = Column(DateTime, default=datetime.now)
 
-class Alert(Base):
-    __tablename__ = "alerts"
-
-    id = Column(Integer, primary_key=True, index=True)
-    asset_id = Column(Integer, ForeignKey("assets.id"))
-    target_price = Column(Float)
-    condition = Column(String) # "ABOVE", "BELOW"
-    is_active = Column(Boolean, default=True)
-    triggered_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.now)
-
-    asset = relationship("Asset", back_populates="alerts")
-
-# Add back_populates to Asset
-Asset.alerts = relationship("Alert", back_populates="asset", cascade="all, delete-orphan")
-
-
 
 class BudgetCategory(Base):
     __tablename__ = "budget_categories"

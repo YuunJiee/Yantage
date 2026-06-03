@@ -1,15 +1,18 @@
 import os
 import sys
+from pathlib import Path
 from logging.config import fileConfig
 
 from sqlalchemy import create_engine
 from alembic import context
 
-# Make sure the project root is importable so `backend.*` resolves correctly.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from backend.models import Base
-from backend.profile_manager import get_db_url
+
+_backend_dir = Path(__file__).parent.parent
+_data_dir = Path(os.environ.get("YANTAGE_DATA_DIR", str(_backend_dir)))
+DATABASE_URL = f"sqlite:///{_data_dir / 'sql_app.db'}"
 
 config = context.config
 target_metadata = Base.metadata
@@ -19,9 +22,8 @@ if config.config_file_name is not None:
 
 
 def run_migrations_offline() -> None:
-    url = get_db_url()
     context.configure(
-        url=url,
+        url=DATABASE_URL,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -31,8 +33,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    url = get_db_url()
-    connectable = create_engine(url, connect_args={"check_same_thread": False})
+    connectable = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():

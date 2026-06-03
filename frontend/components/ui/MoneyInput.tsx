@@ -2,7 +2,6 @@
 
 import { forwardRef, ChangeEvent } from 'react';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
 
 interface MoneyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange'> {
     onChange?: (e: ChangeEvent<HTMLInputElement> & { target: { value: string } }) => void;

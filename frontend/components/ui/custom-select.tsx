@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useLanguage } from '@/components/LanguageProvider';
 
 export interface Option {
     value: string;
@@ -20,12 +19,11 @@ interface CustomSelectProps {
 }
 
 export function CustomSelect({ value, onChange, options, placeholder, disabled = false, className }: CustomSelectProps) {
-    const { t } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     const selectedOption = options.find(opt => opt.value === value);
-    const finalPlaceholder = placeholder || t('select_placeholder');
+    const finalPlaceholder = placeholder || '選擇...';
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -53,7 +51,7 @@ export function CustomSelect({ value, onChange, options, placeholder, disabled =
                 type="button"
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 className={cn(
-                    "flex h-11 w-full items-center justify-between rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-input disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+                    "flex h-9 w-full items-center justify-between rounded-lg border border-input bg-background px-3 py-1.5 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-input disabled:cursor-not-allowed disabled:opacity-50 transition-all",
                     isOpen && "ring-2 ring-primary/20 border-primary",
                     disabled && "cursor-not-allowed opacity-50"
                 )}
@@ -66,15 +64,15 @@ export function CustomSelect({ value, onChange, options, placeholder, disabled =
             </button>
 
             {isOpen && (
-                <div className="absolute z-50 mt-2 max-h-60 w-full overflow-auto rounded-xl border border-border bg-card text-card-foreground shadow-lg animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95">
-                    <div className="p-1">
+                <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-border bg-card text-card-foreground shadow-sm animate-in fade-in-0 zoom-in-95">
+                    <div className="py-1">
                         {options.map((option) => (
                             <div
                                 key={option.value}
                                 onClick={() => handleSelect(option.value)}
                                 className={cn(
-                                    "relative flex w-full cursor-pointer select-none items-center rounded-lg py-2.5 pl-3 pr-8 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-                                    option.value === value && "bg-accent/50 font-medium text-accent-foreground"
+                                    "relative flex w-full cursor-pointer select-none items-center rounded-md py-1.5 pl-3 pr-8 text-sm outline-none transition-colors hover:bg-muted",
+                                    option.value === value && "text-foreground font-medium"
                                 )}
                             >
                                 <span className="block truncate">{option.label}</span>

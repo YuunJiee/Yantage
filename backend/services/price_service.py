@@ -10,6 +10,8 @@ from ..repositories.asset_repo import AssetRepository
 
 logger = logging.getLogger(__name__)
 
+_binance = ccxt.binance()
+
 
 def fetch_stock_price(ticker: str) -> float:
     if ticker.isdigit() and len(ticker) == 4:
@@ -36,8 +38,7 @@ def fetch_crypto_price(ticker: str) -> float:
 
     for attempt in range(3):
         try:
-            exchange = ccxt.binance()
-            ticker_data = exchange.fetch_ticker(f"{symbol}/USDT")
+            ticker_data = _binance.fetch_ticker(f"{symbol}/USDT")
             return float(ticker_data["last"])
         except Exception as e:
             if attempt == 2:

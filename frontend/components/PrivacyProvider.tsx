@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 interface PrivacyContextType {
     isPrivacyMode: boolean;
@@ -10,15 +10,10 @@ interface PrivacyContextType {
 const PrivacyContext = createContext<PrivacyContextType | undefined>(undefined);
 
 export function PrivacyProvider({ children }: { children: React.ReactNode }) {
-    const [isPrivacyMode, setIsPrivacyMode] = useState(false);
-
-    // Persist preference
-    useEffect(() => {
-        const stored = localStorage.getItem('privacy-mode');
-        if (stored) {
-            setIsPrivacyMode(stored === 'true');
-        }
-    }, []);
+    const [isPrivacyMode, setIsPrivacyMode] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return localStorage.getItem('privacy-mode') === 'true';
+    });
 
     const togglePrivacyMode = () => {
         setIsPrivacyMode(prev => {

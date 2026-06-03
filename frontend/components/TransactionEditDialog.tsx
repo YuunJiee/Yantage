@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { updateTransaction, deleteTransaction } from "@/lib/api";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { Trash2, AlertCircle } from "lucide-react";
-import { useLanguage } from "@/components/LanguageProvider";
 
 import type { Transaction } from '@/lib/types';
 
@@ -18,7 +17,6 @@ interface TransactionEditDialogProps {
 }
 
 export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess }: TransactionEditDialogProps) {
-    const { t } = useLanguage();
     const [date, setDate] = useState("");
     const [amount, setAmount] = useState("");
     const [price, setPrice] = useState("");
@@ -50,7 +48,7 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
             onClose();
         } catch (error) {
             console.error("Failed to update transaction", error);
-            alert(t('failed_update_txn'));
+            alert('更新交易失敗');
         } finally {
             setLoading(false);
         }
@@ -58,7 +56,7 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
 
     const handleDelete = async () => {
         if (!transaction) return;
-        if (!confirm(t('delete_transaction_confirm'))) return;
+        if (!confirm('您確定要刪除這筆交易嗎？此操作無法復原。')) return;
         setLoading(true);
         try {
             await deleteTransaction(transaction.id);
@@ -66,7 +64,7 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
             onClose();
         } catch (error) {
             console.error("Failed to delete transaction", error);
-            alert(t('failed_delete_txn'));
+            alert('刪除交易失敗');
         } finally {
             setLoading(false);
         }
@@ -78,12 +76,12 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
         <Dialog
             isOpen={isOpen}
             onClose={onClose}
-            title={t('edit_transaction')}
+            title="編輯交易"
             className="sm:max-w-md"
         >
             <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                    <Label>{t('date_time')}</Label>
+                    <Label>日期與時間</Label>
                     <Input
                         type="datetime-local"
                         value={date}
@@ -93,14 +91,14 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label>{t('amount_qty')}</Label>
+                        <Label>數量 (Amount)</Label>
                         <MoneyInput
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>{t('price_unit_cost')}</Label>
+                        <Label>單價 (Unit Cost)</Label>
                         <MoneyInput
                             value={price}
                             onChange={(e) => setPrice(e.target.value)}
@@ -110,7 +108,7 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
 
                 <div className="text-xs text-muted-foreground bg-muted p-2 rounded flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
-                    {t('edit_txn_warning')}
+                    變更將直接反映於資產總額與淨值。
                 </div>
             </div>
 
@@ -120,13 +118,13 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
                     onClick={handleDelete}
                     disabled={loading}
                     className="aspect-square p-2"
-                    title={t("delete")}
+                    title="刪除"
                 >
                     <Trash2 className="w-4 h-4" />
                 </Button>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={onClose} disabled={loading}>{t('cancel')}</Button>
-                    <Button onClick={handleSave} disabled={loading}>{loading ? t('saving') : t('save')}</Button>
+                    <Button variant="outline" onClick={onClose} disabled={loading}>取消</Button>
+                    <Button onClick={handleSave} disabled={loading}>{loading ? '儲存中...' : '儲存'}</Button>
                 </div>
             </div>
         </Dialog>

@@ -3,7 +3,6 @@
 import { cn } from '@/lib/utils';
 import type { CSSProperties } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { useLanguage } from '@/components/LanguageProvider';
 
 interface SkeletonProps {
     className?: string;
@@ -118,22 +117,21 @@ export function PageError({
     description?: string;
     onRetry?: () => void;
 }) {
-    const { t } = useLanguage();
     return (
         <div className="flex flex-col items-center justify-center py-24 px-6 gap-4 text-center">
             <div className="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive">
                 <AlertTriangle className="w-7 h-7" />
             </div>
             <div className="flex flex-col gap-1.5">
-                <p className="font-semibold text-foreground">{title ?? t('load_error')}</p>
-                <p className="text-sm text-muted-foreground max-w-xs">{description ?? t('load_error_desc')}</p>
+                <p className="font-semibold text-foreground">{title ?? '無法載入資料'}</p>
+                <p className="text-sm text-muted-foreground max-w-xs">{description ?? '請確認網路連線並重試。'}</p>
             </div>
             {onRetry && (
                 <button
                     onClick={onRetry}
                     className="text-sm text-primary underline underline-offset-2 hover:opacity-80 transition-opacity"
                 >
-                    {t('retry')}
+                    重試
                 </button>
             )}
         </div>

@@ -1,19 +1,34 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Plus, GripVertical, Star } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { AssetActionDialog } from './AssetActionDialog';
 import { usePrivacy } from "@/components/PrivacyProvider";
-import { useLanguage } from "@/components/LanguageProvider";
-import { updateAsset } from '@/lib/api';
-import { useRouter } from 'next/navigation';
 import { AssetIcon } from './IconPicker';
 import { getCategoryIconName } from '@/lib/iconHelper';
 import type { Asset, AssetGroup, Transaction } from '@/lib/types';
-import type { TranslationKey } from '@/src/i18n/dictionaries';
+
+const SUBCATEGORY_ZH: Record<string, string> = {
+    'Cash': '現金', 'E-Wallet': '電子錢包', 'Debit Card': '簽帳金融卡', 'Other': '其他',
+    'Fund': '基金', 'Stock': '股票', 'TW Stock': '台股', 'US Stock': '美股',
+    'Mutual Fund': '共同基金', 'Crypto': '加密貨幣', 'Token': '代幣', 'Coin': '幣',
+    'Stablecoin': '穩定幣', 'DeFi': 'DeFi', 'NFT': 'NFT',
+    'Other Investment': '其他投資', 'Real Estate': '房地產', 'Car': '車輛',
+    'Other Fixed Asset': '其他固定資產', 'Credit Card': '信用卡',
+    'Loan': '貸款', 'Payable': '應付帳款', 'Other Liability': '其他負債',
+};
+
+const CATEGORY_DOT: Record<string, string> = {
+    Fluid: 'bg-emerald-400',
+    Crypto: 'bg-orange-400',
+    Stock: 'bg-indigo-500',
+    Fixed: 'bg-blue-400',
+    Receivables: 'bg-amber-400',
+    Liabilities: 'bg-red-400',
+};
 
 interface AssetAccordionProps {
     category: string;
@@ -30,75 +45,28 @@ interface AssetAccordionProps {
     percentage?: number;
 }
 
-const SUBCATEGORY_KEY_MAP: Record<string, TranslationKey> = {
-    'Cash': 'sc_cash',
-    'E-Wallet': 'sc_ewallet',
-    'Debit Card': 'sc_debit_card',
-    'Other': 'sc_other',
-    'Fund': 'sc_fund',
-    'Stock': 'sc_stock',
-    'TW Stock': 'sc_tw_stock',
-    'US Stock': 'sc_us_stock',
-    'Mutual Fund': 'sc_mutual_fund',
-    'Crypto': 'sc_crypto',
-    'Token': 'sc_crypto',
-    'Coin': 'sc_crypto',
-    'Stablecoin': 'sc_stablecoin',
-    'DeFi': 'sc_defi',
-    'NFT': 'sc_nft',
-    'Other Investment': 'sc_other_invest',
-    'Real Estate': 'sc_real_estate',
-    'Car': 'sc_car',
-    'Other Fixed Asset': 'sc_other_fixed',
-    'Credit Card': 'sc_credit_card',
-    'Loan': 'sc_loan',
-    'Payable': 'sc_payable',
-    'Other Liability': 'sc_other_liability',
-};
-
-export function AssetAccordion({ category, title, totalAmount, assets, color, onAddClick, onTitleClick, onActionClick, actionIcon, className, isEditMode, percentage }: AssetAccordionProps) {
+export function AssetAccordion({ category, title, totalAmount, assets, onAddClick, onTitleClick, onActionClick, actionIcon, className, isEditMode, percentage }: AssetAccordionProps) {
     const [isOpen, setIsOpen] = useState(true);
     const [isMounted, setIsMounted] = useState(false);
     const [expandedWeb3Groups, setExpandedWeb3Groups] = useState<Record<string, boolean>>({});
     const { isPrivacyMode } = usePrivacy();
-    const { t } = useLanguage();
 
-    const getTranslatedSubCategory = (sub: string) => {
-        const key = SUBCATEGORY_KEY_MAP[sub];
-        return key ? t(key) : sub;
-    };
-    const router = useRouter();
+    const getTranslatedSubCategory = (sub: string) => SUBCATEGORY_ZH[sub] ?? sub;
 
-    // Dialog State
-    // Dialog State
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
     const [dialogMode, setDialogMode] = useState<'history' | 'edit' | 'adjust' | 'set' | 'transfer'>('history');
 
-    // Load state from localStorage on mount
     useEffect(() => {
-        const savedState = localStorage.getItem(`accordion_open_${category}`);
-        if (savedState !== null) {
-            setIsOpen(savedState === 'true');
-        }
-        // Delay enabling transitions to prevent initial flash
-        setTimeout(() => setIsMounted(true), 100);
+        const saved = localStorage.getItem(`accordion_open_${category}`);
+        if (saved !== null) setIsOpen(saved === 'true');
+        const t = setTimeout(() => setIsMounted(true), 100);
+        return () => clearTimeout(t);
     }, [category]);
 
-    // Save state to localStorage when toggled
     const toggleOpen = () => {
         const newState = !isOpen;
         setIsOpen(newState);
         localStorage.setItem(`accordion_open_${category}`, String(newState));
-    };
-
-    const toggleFavorite = async (e: React.MouseEvent, asset: Asset) => {
-        e.stopPropagation(); // Prevent opening edit dialog
-        try {
-            await updateAsset(asset.id, { is_favorite: !asset.is_favorite });
-            router.refresh();
-        } catch (error) {
-            console.error("Failed to toggle favorite", error);
-        }
     };
 
     const handleCardClick = (asset: Asset) => {
@@ -106,14 +74,10 @@ export function AssetAccordion({ category, title, totalAmount, assets, color, on
         setDialogMode('history');
     };
 
-    const handleCloseDialogs = () => {
-        setSelectedAsset(null);
-    };
+    const handleCloseDialogs = () => setSelectedAsset(null);
 
-    // Filter assets for this category
     const categoryAssets = assets.filter(a => a.category === category);
 
-    // Grouping Logic for Web3 Wallets
     const groupedAssets = (() => {
         const web3Groups: Record<string, Asset[]> = {};
         const others: Asset[] = [];
@@ -128,7 +92,6 @@ export function AssetAccordion({ category, title, totalAmount, assets, color, on
             }
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const finalItems: (Asset | AssetGroup)[] = [...others];
         Object.entries(web3Groups).forEach(([key, group]) => {
             if (group.length > 1) {
@@ -136,7 +99,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, color, on
                     isGroup: true,
                     groupKey: key,
                     assets: group,
-                    name: group[0].name.split(' (')[0] || group[0].name, // e.g. "ETH"
+                    name: group[0].name.split(' (')[0] || group[0].name,
                     ticker: group[0].ticker,
                     icon: group[0].icon,
                     category: group[0].category,
@@ -149,18 +112,11 @@ export function AssetAccordion({ category, title, totalAmount, assets, color, on
             }
         });
 
-        // Sort: Favorites first, then by value descending
-        return finalItems.sort((a, b) => {
-            const aFav = !a.isGroup && a.is_favorite;
-            const bFav = !b.isGroup && b.is_favorite;
-            if (aFav && !bFav) return -1;
-            if (!aFav && bFav) return 1;
-            const getVal = (item: typeof a) =>
-                item.isGroup
-                    ? item.totalValue
-                    : (item.value_twd || ((item.current_price || 0) * (item.transactions?.reduce((acc: number, t: { amount: number }) => acc + t.amount, 0) || 0)));
-            return getVal(b) - getVal(a);
-        });
+        const getVal = (item: typeof finalItems[number]) =>
+            item.isGroup
+                ? item.totalValue
+                : (item.value_twd || ((item.current_price || 0) * (item.transactions?.reduce((acc: number, t: { amount: number }) => acc + t.amount, 0) || 0)));
+        return finalItems.sort((a, b) => getVal(b) - getVal(a));
     })();
 
     const toggleGroupExpand = (e: React.MouseEvent, key: string) => {
@@ -186,311 +142,228 @@ export function AssetAccordion({ category, title, totalAmount, assets, color, on
         zIndex: isDragging ? 50 : 'auto',
     };
 
+    const dot = CATEGORY_DOT[category] ?? 'bg-gray-400';
+
     return (
         <div
             ref={setNodeRef}
             style={style}
-            className={cn("mb-0 flex flex-col h-full", className, isDragging ? "opacity-50" : "")}
+            className={cn(className, isDragging ? "opacity-50" : "")}
         >
-            {/* Header Card - Acts like the 'Drawer Handle' */}
+            {/* ── Category Header Row ─────────────────────────── */}
             <div
                 {...attributes}
-                {...listeners}
-                onClick={(e) => {
-                    if (isEditMode) return;
-                    // If title click handler exists and we clicked loosely (not on buttons), maybe we just toggle open?
-                    // User wants Title to link. But the whole card is the toggle.
-                    // Let's make the Title Text clickable specifically if handler exists.
-                    toggleOpen();
-                }}
+                {...(isEditMode ? listeners : {})}
+                onClick={() => { if (!isEditMode) toggleOpen(); }}
                 className={cn(
-                    "relative p-6 rounded-3xl cursor-pointer shadow-sm border border-transparent hover:shadow-md group",
-                    // Only disable touch-based scrolling when in drag/edit mode;
-                    // otherwise the user can't scroll the page by swiping on these cards.
-                    isEditMode && "touch-none",
-                    isMounted && "transition-all duration-300",
-                    color,
-                    isOpen ? "rounded-b-none shadow-none ring-2 ring-black/5" : "text-white",
-                    isEditMode ? "cursor-grab active:cursor-grabbing" : ""
+                    "flex items-center gap-3 py-3 cursor-pointer select-none group",
+                    isEditMode && "touch-none cursor-grab active:cursor-grabbing"
                 )}
             >
-                <div className="flex justify-between items-start mb-4">
-                    <h3
-                        className={cn("text-lg font-medium tracking-tight flex items-center gap-2", isOpen ? "text-gray-900" : "text-white/90", onTitleClick ? "hover:underline cursor-pointer z-10" : "")}
-                        onClick={(e) => {
-                            if (onTitleClick) {
-                                e.stopPropagation();
-                                onTitleClick();
-                            }
-                        }}
-                    >
-                        {isEditMode && <GripVertical className="w-5 h-5 opacity-60" />}
-                        {title}
-                        {onTitleClick && <ChevronRight className="w-4 h-4 opacity-50" />}
-                    </h3>
-                    <div className="flex gap-2">
-                        {/* Secondary Action (Integration) */}
-                        {onActionClick && actionIcon && (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onActionClick();
-                                }}
-                                className={cn(
-                                    "p-2 rounded-full backdrop-blur-sm transition-colors hover:bg-white hover:text-black",
-                                    isOpen ? "bg-gray-100 text-gray-500" : "bg-white/20 text-white"
-                                )}
-                                title="Action"
-                            >
-                                {actionIcon}
-                            </button>
-                        )}
+                {isEditMode && <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />}
 
-                        {/* Quick Add Button in Header */}
-                        {/* Quick Add Button in Header */}
-                        {onAddClick && (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onAddClick();
-                                }}
-                                className={cn(
-                                    "p-2 rounded-full backdrop-blur-sm transition-colors hover:bg-white hover:text-black",
-                                    isOpen ? "bg-gray-100 text-gray-500" : "bg-white/20 text-white"
-                                )}
-                                title="Add Asset"
-                            >
-                                <Plus className="w-5 h-5" />
-                            </button>
-                        )}
+                {/* Color dot */}
+                <div className={cn("w-2 h-2 rounded-full shrink-0", dot)} />
 
-                        <div className={cn("p-2 rounded-full backdrop-blur-sm", isOpen ? "bg-gray-100 text-gray-900" : "bg-white/20 text-white")}>
-                            {isOpen ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                        </div>
-                    </div>
-                </div>
+                {/* Title */}
+                <h3
+                    className={cn("text-sm font-semibold text-foreground flex items-center gap-1.5", onTitleClick ? "hover:underline cursor-pointer" : "")}
+                    onClick={(e) => { if (onTitleClick) { e.stopPropagation(); onTitleClick(); } }}
+                >
+                    {title}
+                    {onTitleClick && <ChevronRight className="w-3.5 h-3.5 opacity-40" />}
+                </h3>
 
-                <span className={cn("text-2xl md:text-3xl font-bold tracking-tighter", isOpen ? "text-gray-900" : "text-white")}>
-                    {isPrivacyMode ? '****' : `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(totalAmount)}`}
-                </span>
-
-                {/* Percentage Display */}
+                {/* Allocation % */}
                 {percentage !== undefined && percentage > 0 && (
-                    <div className={cn(
-                        "absolute bottom-6 right-6 text-xl font-bold font-handwritten", // Handwritten style adjustment if we had a font
-                        isOpen ? "text-gray-300" : "text-white/30"
-                    )}>
-                        {percentage}%
-                    </div>
+                    <span className="text-[11px] text-muted-foreground/70 font-medium tabular-nums">{percentage}%</span>
                 )}
 
-            </div>
+                {/* Right side */}
+                <div className="ml-auto flex items-center gap-2">
+                    {/* Quick actions */}
+                    {onActionClick && actionIcon && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onActionClick(); }}
+                            className="p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                            title="Action"
+                        >
+                            <span className="w-3.5 h-3.5 block [&>svg]:w-3.5 [&>svg]:h-3.5">{actionIcon}</span>
+                        </button>
+                    )}
+                    {onAddClick && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onAddClick(); }}
+                            className="p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                            title="新增資產"
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                        </button>
+                    )}
 
-            {/* Expanded Content Wrapper with Grid Animation */}
-            <div className={cn("grid", isMounted && "transition-all duration-300 ease-in-out", isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
-                <div className="overflow-hidden">
-                    <div className="bg-card border-x border-b border-border rounded-b-3xl p-6 shadow-sm">
-                        {categoryAssets.length === 0 ? (
-                            <div className="text-center text-muted-foreground py-4 text-sm">{t('no_assets_yet')}</div>
-                        ) : (
-                            // Changed to Single Column Layout
-                            <div className={cn("grid gap-3 grid-cols-1")}>
-                                {groupedAssets.map(item => {
-                                    if (item.isGroup) {
-                                        const isExpanded = expandedWeb3Groups[item.groupKey];
-                                        return (
-                                            <div key={item.groupKey} className="space-y-2">
-                                                {/* Group Header */}
-                                                <div
-                                                    onClick={(e) => toggleGroupExpand(e, item.groupKey)}
-                                                    className="relative p-4 rounded-3xl border border-border/80 bg-muted/20 hover:border-primary/50 transition-all cursor-pointer flex items-center justify-between"
-                                                >
-                                                    <div className="flex items-center gap-3 md:gap-5 flex-1 min-w-0">
-                                                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-muted/50 flex items-center justify-center shrink-0">
-                                                            {item.icon ? (
-                                                                <AssetIcon icon={item.icon} className="w-5 h-5 md:w-6 md:h-6" />
-                                                            ) : (
-                                                                <AssetIcon icon={getCategoryIconName(item.category, item.sub_category ?? undefined)} className="w-5 h-5 md:w-6 md:h-6" />
-                                                            )}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="text-sm md:text-base font-bold text-foreground leading-none truncate">{item.name}</div>
-                                                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">{item.assets.length} {t('chains')}</span>
-                                                            </div>
-                                                            <div className="text-[10px] md:text-xs text-muted-foreground font-medium uppercase mt-1">Multi-Chain Asset</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex flex-col items-end gap-1">
-                                                        <div className="font-bold text-foreground text-lg md:text-xl tracking-tight">
-                                                            {isPrivacyMode ? '****' : `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(item.totalValue)}`}
-                                                        </div>
-                                                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                                                            {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                                                            {isExpanded ? t('collapse') : t('expand')}
-                                                        </div>
-                                                    </div>
-                                                </div>
+                    {/* Total amount */}
+                    <span className="text-sm font-semibold text-foreground tabular-nums">
+                        {isPrivacyMode ? '••••' : `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(totalAmount)}`}
+                    </span>
 
-                                                {/* Group Children */}
-                                                {isExpanded && (
-                                                    <div className="grid gap-2 pl-6 border-l-2 border-border/30 ml-6 pb-2 transition-all">
-                                                        {item.assets.map((asset) => {
-                                                            const value = (asset.value_twd !== undefined && asset.value_twd !== 0) ? asset.value_twd : ((asset.current_price || 0) * (asset.transactions?.reduce((acc: number, tx: Transaction) => acc + tx.amount, 0) || 0));
-                                                            return (
-                                                                <div
-                                                                    key={asset.id}
-                                                                    onClick={() => handleCardClick(asset)}
-                                                                    className="p-3 rounded-2xl bg-card border border-border/60 hover:border-primary/40 transition-all cursor-pointer flex items-center justify-between"
-                                                                >
-                                                                    <div className="flex items-center gap-3">
-                                                                        <div className="w-6 h-6 md:w-8 md:h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                                                                            <span className="text-[8px] md:text-[10px] font-bold opacity-70">{asset.network?.substring(0, 3).toUpperCase()}</span>
-                                                                        </div>
-                                                                        <div className="flex flex-col">
-                                                                            <span className="text-xs font-bold">{asset.network}</span>
-                                                                            <span className="text-[10px] text-muted-foreground uppercase">{asset.ticker?.split('-')[0]}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="text-right">
-                                                                        <div className="text-sm md:text-base font-bold">
-                                                                            {isPrivacyMode ? '****' : `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value)}`}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    }
-
-                                    const asset = item;
-                                    const value = (asset.value_twd !== undefined && asset.value_twd !== 0) ? asset.value_twd : ((asset.current_price || 0) * (asset.transactions?.reduce((acc: number, tx: Transaction) => acc + tx.amount, 0) || 0));
-
-                                    return (
-                                        <div
-                                            key={asset.id}
-                                            onClick={() => handleCardClick(asset)}
-                                            className={cn(
-                                                "relative p-4 rounded-3xl border border-border/60 transition-all cursor-pointer group flex items-center justify-between overflow-hidden",
-                                                asset.include_in_net_worth === false ? "bg-muted/30 opacity-60 grayscale-[0.5]" : "bg-card hover:border-primary/50 hover:shadow-md"
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-3 md:gap-5 flex-1 min-w-0">
-                                                {/* Icon */}
-                                                <div className={cn("w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors",
-                                                    asset.include_in_net_worth === false ? "bg-muted" : "bg-muted/50 text-foreground"
-                                                )}>
-                                                    {asset.icon ? (
-                                                        <AssetIcon icon={asset.icon} className="w-5 h-5 md:w-6 md:h-6" />
-                                                    ) : (
-                                                        <AssetIcon icon={getCategoryIconName(asset.category, asset.sub_category ?? undefined)} className="w-5 h-5 md:w-6 md:h-6" />
-                                                    )}
-                                                </div>
-
-                                                {/* Info */}
-                                                <div className="space-y-0.5 md:space-y-1 min-w-0 flex-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="text-sm md:text-base font-bold text-foreground leading-none truncate">{asset.name}</div>
-                                                        {asset.include_in_net_worth === false && (
-                                                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium whitespace-nowrap">{t('excluded')}</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        {(asset.ticker || asset.sub_category) && (
-                                                            <div className="text-[10px] md:text-xs text-muted-foreground font-medium uppercase tracking-wider truncate max-w-[80px] md:max-w-none">
-                                                                {asset.ticker || (asset.sub_category ? getTranslatedSubCategory(asset.sub_category) : '')}
-                                                            </div>
-                                                        )}
-                                                        {asset.last_updated_at && (
-                                                            <>
-                                                                {(asset.ticker || asset.sub_category) && (
-                                                                    <span className="text-muted-foreground/40">•</span>
-                                                                )}
-                                                                <div className="text-[10px] text-muted-foreground/60 whitespace-nowrap">
-                                                                    <span className="hidden md:inline">{t('updated_label')}: </span>
-                                                                    {new Date(asset.last_updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                    {/* Payment Due Day for Credit Cards */}
-                                                    {asset.category === 'Liabilities' && asset.payment_due_day && (
-                                                        <div className="text-[10px] text-muted-foreground/80 font-medium">
-                                                            📅 {t('due_on_day').replace('{day}', String(asset.payment_due_day))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-
-
-                                            {/* Right Side */}
-                                            <div className="flex flex-col items-end gap-0.5 md:gap-1 shrink-0 ml-1">
-                                                {/* Favorite Star - Always visible */}
-                                                <button
-                                                    onClick={(e) => toggleFavorite(e, asset)}
-                                                    className="p-1.5 md:p-2 hover:bg-yellow-500/10 rounded-full transition-colors mb-0.5"
-                                                >
-                                                    <Star className={cn("w-4 h-4 md:w-5 md:h-5 transition-colors",
-                                                        asset.is_favorite
-                                                            ? "fill-current text-yellow-500"
-                                                            : "text-muted-foreground hover:text-yellow-500"
-                                                    )} />
-                                                </button>
-
-                                                {/* Amount & Percentage */}
-                                                <div className="text-right">
-                                                    <div className="font-bold text-foreground text-lg md:text-xl tracking-tight flex items-center justify-end gap-1 md:gap-2">
-                                                        {isPrivacyMode ? '****' : `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value)}`}
-                                                    </div>
-
-                                                    {/* Percentage Badge */}
-                                                    {totalAmount > 0 && asset.include_in_net_worth !== false && (
-                                                        <div className="mt-0.5 md:mt-1 flex justify-end">
-                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] md:text-[11px] font-medium bg-muted text-muted-foreground">
-                                                                {Math.round((value / totalAmount) * 100)}%
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Progress Bar at Bottom */}
-                                            {
-                                                totalAmount > 0 && asset.include_in_net_worth !== false && (
-                                                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/50 overflow-hidden rounded-b-3xl">
-                                                        <div
-                                                            className="h-full bg-primary/20"
-                                                            style={{ width: `${(value / totalAmount) * 100}%` }}
-                                                        />
-                                                    </div>
-                                                )
-                                            }
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
+                    {/* Chevron */}
+                    <ChevronDown className={cn(
+                        "w-4 h-4 text-muted-foreground/60 transition-transform duration-200",
+                        isMounted && "transition-transform",
+                        isOpen ? "rotate-180" : "rotate-0"
+                    )} />
                 </div>
             </div>
 
 
-            {/* Unified Asset Action Dialog */}
-            {
-                selectedAsset && (
-                    <AssetActionDialog
-                        isOpen={!!selectedAsset}
-                        onClose={handleCloseDialogs}
-                        asset={selectedAsset}
-                        allAssets={assets} // Pass all assets for Transfer context
-                        initialMode={dialogMode}
-                    />
-                )
-            }
-        </div >
+            {/* ── Asset List ─────────────────────────────────── */}
+            <div className={cn(
+                "grid",
+                isMounted && "transition-all duration-200 ease-in-out",
+                isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+            )}>
+                <div className="overflow-hidden">
+                    {categoryAssets.length === 0 ? (
+                        <div className="py-4 px-1 text-sm text-muted-foreground">尚無資產</div>
+                    ) : (
+                        <div>
+                            {groupedAssets.map(item => {
+                                if (item.isGroup) {
+                                    const isExpanded = expandedWeb3Groups[item.groupKey];
+                                    return (
+                                        <div key={item.groupKey}>
+                                            <div
+                                                onClick={(e) => toggleGroupExpand(e, item.groupKey)}
+                                                className="flex items-center gap-3 py-3 cursor-pointer hover:bg-muted/40 rounded-lg px-1 -mx-1 transition-colors"
+                                            >
+                                                <div className="w-8 h-8 rounded-xl bg-muted/60 flex items-center justify-center shrink-0">
+                                                    {item.icon ? (
+                                                        <AssetIcon icon={item.icon} className="w-4 h-4" />
+                                                    ) : (
+                                                        <AssetIcon icon={getCategoryIconName(item.category, item.sub_category ?? undefined)} className="w-4 h-4" />
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-sm font-medium text-foreground truncate">{item.name}</span>
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">{item.assets.length} 條鏈</span>
+                                                    </div>
+                                                    <div className="text-[11px] text-muted-foreground">Multi-Chain</div>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-sm font-semibold tabular-nums">
+                                                        {isPrivacyMode ? '••••' : `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(item.totalValue)}`}
+                                                    </span>
+                                                    <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground/50 transition-transform", isExpanded && "rotate-180")} />
+                                                </div>
+                                            </div>
+
+                                            {isExpanded && (
+                                                <div className="pl-4 border-l border-border/40 ml-4 mb-1">
+                                                    {item.assets.map((asset) => {
+                                                        const value = (asset.value_twd !== undefined && asset.value_twd !== 0) ? asset.value_twd : ((asset.current_price || 0) * (asset.transactions?.reduce((acc: number, tx: Transaction) => acc + tx.amount, 0) || 0));
+                                                        return (
+                                                            <div
+                                                                key={asset.id}
+                                                                onClick={() => handleCardClick(asset)}
+                                                                className="flex items-center justify-between py-2.5 cursor-pointer hover:bg-muted/40 rounded-lg px-2 -mx-2 transition-colors"
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[10px] font-bold text-muted-foreground uppercase w-8 text-center">{asset.network?.substring(0, 3)}</span>
+                                                                    <span className="text-xs font-medium">{asset.network}</span>
+                                                                </div>
+                                                                <span className="text-xs font-semibold tabular-nums">
+                                                                    {isPrivacyMode ? '••••' : `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)}`}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                            <div className="h-px bg-border/40" />
+                                        </div>
+                                    );
+                                }
+
+                                const asset = item;
+                                const value = (asset.value_twd !== undefined && asset.value_twd !== 0) ? asset.value_twd : ((asset.current_price || 0) * (asset.transactions?.reduce((acc: number, tx: Transaction) => acc + tx.amount, 0) || 0));
+
+                                return (
+                                    <div
+                                        key={asset.id}
+                                        onClick={() => handleCardClick(asset)}
+                                        className={cn(
+                                            "flex items-center gap-3 py-3 cursor-pointer hover:bg-muted/40 rounded-lg px-1 -mx-1 transition-colors group/row",
+                                            asset.include_in_net_worth === false && "opacity-50"
+                                        )}
+                                    >
+                                        {/* Icon */}
+                                        <div className="w-8 h-8 rounded-xl bg-muted/60 flex items-center justify-center shrink-0">
+                                            {asset.icon ? (
+                                                <AssetIcon icon={asset.icon} className="w-4 h-4" />
+                                            ) : (
+                                                <AssetIcon icon={getCategoryIconName(asset.category, asset.sub_category ?? undefined)} className="w-4 h-4" />
+                                            )}
+                                        </div>
+
+                                        {/* Name + meta */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-sm font-medium text-foreground truncate">{asset.name}</span>
+                                                {asset.include_in_net_worth === false && (
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">不計入</span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                {(asset.ticker || asset.sub_category) && (
+                                                    <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                                                        {asset.ticker || (asset.sub_category ? getTranslatedSubCategory(asset.sub_category) : '')}
+                                                    </span>
+                                                )}
+                                                {asset.last_updated_at && (asset.ticker || asset.sub_category) && (
+                                                    <span className="text-muted-foreground/40 text-[11px]">·</span>
+                                                )}
+                                                {asset.last_updated_at && (
+                                                    <span className="text-[11px] text-muted-foreground/60">
+                                                        {new Date(asset.last_updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
+                                                    </span>
+                                                )}
+                                                {asset.category === 'Liabilities' && asset.payment_due_day && (
+                                                    <span className="text-[11px] text-muted-foreground/80">每月 {asset.payment_due_day} 日</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Right side: favorite + amount */}
+                                        <div className="text-right shrink-0">
+                                            <div className="text-sm font-semibold text-foreground tabular-nums">
+                                                {isPrivacyMode ? '••••' : `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)}`}
+                                            </div>
+                                            {totalAmount > 0 && asset.include_in_net_worth !== false && (
+                                                <div className="text-[11px] text-muted-foreground/60 tabular-nums">
+                                                    {Math.round((value / totalAmount) * 100)}%
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                    {/* Bottom spacing inside expanded section */}
+                    <div className="pb-2" />
+                </div>
+            </div>
+
+            {selectedAsset && (
+                <AssetActionDialog
+                    isOpen={!!selectedAsset}
+                    onClose={handleCloseDialogs}
+                    asset={selectedAsset}
+                    allAssets={assets}
+                    initialMode={dialogMode}
+                />
+            )}
+        </div>
     );
 }

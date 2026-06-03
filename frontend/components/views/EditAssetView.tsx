@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useLanguage } from '@/components/LanguageProvider';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from '@/components/ui/MoneyInput';
 import { CustomSelect } from "@/components/ui/custom-select";
-import { updateAsset, deleteAsset, API_URL } from '@/lib/api';
-import type { Asset, Transaction } from '@/lib/types';
+import { updateAsset, deleteAsset } from '@/lib/api';
+import type { Asset } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { Trash2, X, Plus, Tag as TagIcon, ArrowLeft } from 'lucide-react';
-import { IconPicker, AssetIcon, getDefaultIcon } from '../IconPicker';
+import { Trash2, ArrowLeft } from 'lucide-react';
+import { IconPicker, getDefaultIcon } from '../IconPicker';
 
 interface EditAssetViewProps {
     asset: Asset | null;
@@ -19,7 +18,6 @@ interface EditAssetViewProps {
 
 export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
     const router = useRouter();
-    const { t } = useLanguage();
     const [loading, setLoading] = useState(false);
 
     const [formData, setFormData] = useState<{
@@ -53,33 +51,14 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
         'Liabilities': ['Credit Card', 'Loan', 'Payable', 'Other Liability']
     };
 
-    const getSubCategoryLabel = (key: string) => {
-        const map: Record<string, string> = {
-            'Cash': t('sc_cash'),
-            'E-Wallet': t('sc_ewallet'),
-            'Debit Card': t('sc_debit_card'),
-            'Other': t('sc_other'),
-            'Coin': t('sc_coin'),
-            'Token': t('sc_token'),
-            'Stablecoin': t('sc_stablecoin'),
-            'DeFi': t('sc_defi'),
-            'NFT': t('sc_nft'),
-            'TW Stock': t('sc_tw_stock'),
-            'US Stock': t('sc_us_stock'),
-            'ETF': t('sc_etf'),
-            'Bond': t('sc_bond'),
-            'Mutual Fund': t('sc_mutual_fund'),
-            'Other Investment': t('sc_other_invest'),
-            'Real Estate': t('sc_real_estate'),
-            'Car': t('sc_car'),
-            'Other Fixed Asset': t('sc_other_fixed'),
-            'Credit Card': t('sc_credit_card'),
-            'Loan': t('sc_loan'),
-            'Payable': t('sc_payable'),
-            'Other Liability': t('sc_other_liability')
-        };
-        return map[key] || key;
-    };
+    const getSubCategoryLabel = (key: string) => ({
+        'Cash': '現金', 'E-Wallet': '電子錢包', 'Debit Card': '簽帳金融卡', 'Other': '其他',
+        'Coin': '幣', 'Token': '代幣', 'Stablecoin': '穩定幣', 'DeFi': 'DeFi', 'NFT': 'NFT',
+        'TW Stock': '台股', 'US Stock': '美股', 'ETF': 'ETF', 'Bond': '債券',
+        'Mutual Fund': '共同基金', 'Other Investment': '其他投資', 'Real Estate': '房地產',
+        'Car': '車輛', 'Other Fixed Asset': '其他固定資產', 'Credit Card': '信用卡',
+        'Loan': '貸款', 'Payable': '應付帳款', 'Other Liability': '其他負債'
+    } as Record<string,string>)[key] ?? key;
 
     useEffect(() => {
         if (asset) {
@@ -99,13 +78,13 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
 
     const handleDelete = async () => {
         if (!asset) return;
-        if (!confirm(t('delete_asset_confirm'))) return;
+        if (!confirm('您確定要刪除這項資產嗎？')) return;
         setLoading(true);
         try {
             await deleteAsset(asset.id);
             router.refresh();
             onClose();
-        } catch (e) {
+        } catch {
             alert('Delete failed');
         } finally {
             setLoading(false);
@@ -148,15 +127,13 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
 
     if (!asset) return null;
 
-    const currentBalance = asset.transactions ? asset.transactions.reduce((acc: number, tx: Transaction) => acc + tx.amount, 0) : 0;
-
     return (
         <div className="max-h-[80vh] overflow-y-auto px-1">
             <form onSubmit={handleSubmit} className="space-y-6">
 
                 {asset.source === 'max' && (
                     <div className="bg-blue-500/10 text-blue-600 px-4 py-3 rounded-xl text-sm font-medium mb-4 flex items-center gap-2">
-                        {t('max_managed_notice')}
+                        🔒 此資產由 MAX 整合自動管理，已停用手動編輯以確保數據一致性。
                     </div>
                 )}
 
@@ -164,7 +141,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                     {/* Name & Icon */}
                     <div className="flex gap-4 items-end">
                         <div className="space-y-2">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('icon_label')}</Label>
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">圖示</Label>
                             <IconPicker
                                 value={formData.icon}
                                 onChange={(icon) => setFormData({ ...formData, icon })}
@@ -172,7 +149,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                             />
                         </div>
                         <div className="flex-1 space-y-2">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('name')}</Label>
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">名稱</Label>
                             <Input
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -182,7 +159,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
 
                     {formData.category !== 'Receivables' && (
                         <div className="space-y-2">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('subcategory')}</Label>
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">子類別</Label>
                             <CustomSelect
                                 value={formData.subCategory}
                                 onChange={(val) => setFormData({ ...formData, subCategory: val })}
@@ -194,7 +171,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                     {(formData.category === 'Stock' || formData.category === 'Crypto') && (
                         <div className="flex gap-4">
                             <div className="space-y-2 flex-1">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('ticker')}</Label>
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">股票代號</Label>
                                 <Input
                                     className="h-11 rounded-xl"
                                     value={formData.ticker}
@@ -202,7 +179,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                                 />
                             </div>
                             <div className="space-y-2 flex-1">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('avg_cost_twd')}</Label>
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">平均成本 (TWD)</Label>
                                 <MoneyInput
                                     className="h-11 rounded-xl"
                                     value={formData.manualAvgCost}
@@ -215,17 +192,17 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
 
                     {formData.category === 'Liabilities' && (
                         <div className="space-y-2">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('payment_due_day')}</Label>
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">繳費日期</Label>
                             <Input
                                 type="number"
                                 min="1"
                                 max="31"
                                 value={formData.paymentDueDay}
                                 onChange={(e) => setFormData({ ...formData, paymentDueDay: e.target.value })}
-                                placeholder={t('payment_due_day_hint')}
+                                placeholder="1-31"
                                 className="font-mono h-11 rounded-xl"
                             />
-                            <p className="text-[10px] text-muted-foreground pt-1">{t('payment_due_day_desc')}</p>
+                            <p className="text-[10px] text-muted-foreground pt-1">每月需繳費的日期。</p>
                         </div>
                     )}
 
@@ -241,7 +218,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                                 onChange={(e) => setFormData({ ...formData, includeInNetWorth: e.target.checked })}
                             />
                             <label htmlFor="editIncludeInNetWorth" className="text-sm font-medium leading-none cursor-pointer">
-                                {t('include_in_net_worth')}
+                                計入淨值計算
                             </label>
                         </div>
                     </div>
@@ -251,12 +228,12 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                     <div className="flex gap-2">
                         {onBack && (
                             <Button type="button" variant="ghost" onClick={onBack}>
-                                <ArrowLeft className="w-4 h-4 mr-1" /> {t('back')}
+                                <ArrowLeft className="w-4 h-4 mr-1" /> 返回
                             </Button>
                         )}
                         {asset.source !== 'max' && (
                             <Button type="button" variant="ghost" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={handleDelete}>
-                                <Trash2 className="w-4 h-4 mr-1" /> {t('delete')}
+                                <Trash2 className="w-4 h-4 mr-1" /> 刪除
                             </Button>
                         )}
                     </div>
@@ -264,7 +241,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                         {/* <Button type="button" variant="ghost" onClick={onClose}>{t('cancel')}</Button> */}
                         {asset.source !== 'max' && (
                             <Button type="submit" disabled={loading}>
-                                {loading ? t('loading') : t('save_changes')}
+                                {loading ? '載入中...' : '儲存變更'}
                             </Button>
                         )}
                     </div>

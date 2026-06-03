@@ -94,23 +94,6 @@ class DashboardData(BaseModel):
     assets: List[Asset]
     updated_at: datetime
     
-class AlertBase(BaseModel):
-    target_price: float
-    condition: str # ABOVE, BELOW
-
-class AlertCreate(AlertBase):
-    pass
-
-class Alert(AlertBase):
-    id: int
-    asset_id: int
-    is_active: bool
-    triggered_at: datetime | None
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 # Goal Schemas
 class GoalBase(BaseModel):
     name: str
@@ -211,12 +194,3 @@ class ConnectionResponse(BaseModel):
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
-
-
-# --- Profile schemas ---
-
-class ProfileCreate(BaseModel):
-    name: str
-
-class ProfileSwitch(BaseModel):
-    name: str

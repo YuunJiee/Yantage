@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useLanguage } from '@/components/LanguageProvider';
 import { useToast } from '@/components/ui/toast';
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { CustomSelect } from "@/components/ui/custom-select";
 import { createAsset, createTransaction, lookupTicker, fetchIntegrations } from '@/lib/api';
 import type { IntegrationConnection } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { IconPicker, AssetIcon, getDefaultIcon } from './IconPicker';
+import { IconPicker, getDefaultIcon } from './IconPicker';
 
 
 
@@ -21,7 +20,6 @@ interface AddAssetDialogProps {
 }
 
 export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDialogProps) {
-    const { t } = useLanguage();
     const router = useRouter();
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
@@ -49,12 +47,12 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
     const [decimals, setDecimals] = useState('18');
 
     const categories = [
-        { value: 'Fluid', label: t('Fluid') },
-        { value: 'Crypto', label: t('Crypto') },
-        { value: 'Stock', label: t('Stock') },
-        { value: 'Fixed', label: t('Fixed') },
-        { value: 'Receivables', label: t('Receivables') },
-        { value: 'Liabilities', label: t('Liabilities') },
+        { value: 'Fluid', label: '流動資產' },
+        { value: 'Crypto', label: '加密貨幣' },
+        { value: 'Stock', label: '股票' },
+        { value: 'Fixed', label: '固定資產' },
+        { value: 'Receivables', label: '應收帳款' },
+        { value: 'Liabilities', label: '負債' },
     ];
 
     const subCategories: Record<string, string[]> = {
@@ -66,36 +64,15 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
         'Liabilities': ['Credit Card', 'Loan', 'Payable', 'Other Liability']
     };
 
-    const getSubCategoryLabel = (key: string) => {
-        const map: Record<string, string> = {
-            'Cash': t('sc_cash'),
-            'E-Wallet': t('sc_ewallet'),
-            'Debit Card': t('sc_debit_card'),
-            'Other': t('sc_other'),
-            'Coin': t('sc_coin'),
-            'Token': t('sc_token'),
-            'Stablecoin': t('sc_stablecoin'),
-            'DeFi': t('sc_defi'),
-            'NFT': t('sc_nft'),
-            'TW Stock': t('sc_tw_stock'),
-            'US Stock': t('sc_us_stock'),
-            'Mutual Fund': t('sc_mutual_fund'),
-            'Fund': t('sc_fund'),
-            'Stock': t('sc_stock'),
-            'Crypto': t('sc_crypto'),
-            'Other Investment': t('sc_other_invest'),
-            'Real Estate': t('sc_real_estate'),
-            'Car': t('sc_car'),
-            'Other Fixed Asset': t('sc_other_fixed'),
-            'Credit Card': t('sc_credit_card'),
-            'Loan': t('sc_loan'),
-            'Payable': t('sc_payable'),
-            'Other Liability': t('sc_other_liability')
-        };
-        return map[key] || key;
-    };
+    const getSubCategoryLabel = (key: string) => ({
+        'Cash': '現金', 'E-Wallet': '電子錢包', 'Debit Card': '簽帳金融卡', 'Other': '其他',
+        'Coin': '幣', 'Token': '代幣', 'Stablecoin': '穩定幣', 'DeFi': 'DeFi', 'NFT': 'NFT',
+        'TW Stock': '台股', 'US Stock': '美股', 'Mutual Fund': '共同基金', 'Fund': '基金',
+        'Stock': '股票', 'Crypto': '加密貨幣', 'Other Investment': '其他投資',
+        'Real Estate': '房地產', 'Car': '車輛', 'Other Fixed Asset': '其他固定資產',
+        'Credit Card': '信用卡', 'Loan': '貸款', 'Payable': '應付帳款', 'Other Liability': '其他負債'
+    } as Record<string,string>)[key] ?? key;
 
-    const currentSubCategories = subCategories[formData.category] || [];
 
     // Reset form and sync category when dialog opens
     useEffect(() => {
@@ -126,6 +103,8 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                 setConnections((data as IntegrationConnection[]).filter((c) => c.provider === 'wallet'));
             }).catch(console.error);
         }
+    // subCategories is module-level const — stable, no need in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, defaultCategory]);
 
     // Auto-fetch ticker info when ticker is entered for stocks/crypto
@@ -228,7 +207,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
             const initialBalance = parseFloat(formData.initialBalance);
             if (initialBalance && !isNaN(initialBalance) && initialBalance !== 0) {
                 // Use manual avg cost if provided, otherwise fetched price, otherwise 0/1
-                let buyPrice = formData.manualAvgCost ? parseFloat(formData.manualAvgCost) : (fetchedPrice || (formData.ticker ? 0 : 1.0));
+                const buyPrice = formData.manualAvgCost ? parseFloat(formData.manualAvgCost) : (fetchedPrice || (formData.ticker ? 0 : 1.0));
 
                 await createTransaction(assetRes.id, {
                     amount: initialBalance,
@@ -239,12 +218,12 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
 
             router.refresh();
             onClose();
-            toast(t('asset_created'), 'success');
+            toast('資產新增成功', 'success');
             setFormData({ name: '', ticker: '', category: 'Fluid', subCategory: '', initialBalance: '', includeInNetWorth: true, icon: '', manualAvgCost: '', paymentDueDay: '' });
             setMarket('TW');
         } catch (error) {
             console.error("Failed to create asset", error);
-            toast(t('asset_create_failed'), 'error');
+            toast('新增資產失敗', 'error');
         } finally {
             setLoading(false);
         }
@@ -273,13 +252,13 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
     const defaultIconPreview = getDefaultIcon(formData.category, formData.subCategory);
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title={t('add_asset')}>
+        <Dialog isOpen={isOpen} onClose={onClose} title="新增資產">
             <form onSubmit={handleSubmit} className="space-y-4">
 
                 {/* Row 1: Icon & Name */}
                 <div className="flex gap-4 items-end">
                     <div className="space-y-2">
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('icon_label')}</Label>
+                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">圖示</Label>
                         <IconPicker
                             value={formData.icon}
                             onChange={(icon) => setFormData({ ...formData, icon })}
@@ -287,14 +266,14 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                         />
                     </div>
                     <div className="flex-1 space-y-2">
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('name')}</Label>
+                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{"名稱"}</Label>
                         <Input
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             placeholder={
-                                formData.category === 'Fluid' ? t('ph_bank_account') :
-                                    formData.category === 'Stock' ? t('ph_stock') :
-                                        formData.category === 'Crypto' ? 'Bitcoin' : t('ph_asset_name')
+                                formData.category === 'Fluid' ? '例如：我的銀行帳戶' :
+                                    formData.category === 'Stock' ? '例如：台積電' :
+                                        formData.category === 'Crypto' ? 'Bitcoin' : '資產名稱'
                             }
                         />
                     </div>
@@ -303,7 +282,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                 {/* Row 2: Category & SubCategory */}
                 <div className="grid grid-cols-2 gap-4">
                     <div className={`space-y-2 ${formData.category === 'Receivables' ? 'col-span-2' : ''}`}>
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('asset')}</Label>
+                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">資產</Label>
                         <CustomSelect
                             value={formData.category}
                             onChange={(val) => {
@@ -319,7 +298,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                     </div>
                     {formData.category !== 'Receivables' && (
                         <div className="space-y-2">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('subcategory')}</Label>
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">子類別</Label>
                             <CustomSelect
                                 value={formData.subCategory}
                                 onChange={(val) => {
@@ -341,7 +320,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                         {/* Source Selection for Crypto */}
                         {formData.category === 'Crypto' && (
                             <div className="space-y-2">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('source')}</Label>
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">來源</Label>
                                 <div className="flex gap-2">
                                     <button
                                         type="button"
@@ -412,7 +391,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
 
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('ticker')}</Label>
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">股票代號</Label>
                             </div>
                             <div className="relative">
                                 <Input
@@ -422,7 +401,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                                         if (!e.target.value) setFetchedPrice(null);
                                     }}
                                     onBlur={handleTickerBlur}
-                                    placeholder={market === 'TW' ? t('ph_ticker_tw') : t('ph_ticker_us')}
+                                    placeholder={market === 'TW' ? '例如：2330' : '例如：AAPL'}
                                     className="pr-24 font-mono uppercase"
                                 />
                                 {fetchedPrice !== null && (
@@ -441,15 +420,15 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                 <div className="grid grid-cols-2 gap-4">
                     <div className={`space-y-2 ${formData.category !== 'Stock' && formData.category !== 'Crypto' ? 'col-span-2' : ''}`}>
                         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            {formData.category === 'Stock' ? t('current_shares') :
-                                formData.category === 'Crypto' ? t('current_holdings') :
-                                    t('initial_balance')}
+                            {formData.category === 'Stock' ? '目前股數' :
+                                formData.category === 'Crypto' ? '目前持倉' :
+                                    '初始餘額'}
                         </Label>
                         <MoneyInput
                             className="font-mono"
                             value={formData.initialBalance}
                             onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })}
-                            placeholder={t('ph_amount')}
+                            placeholder="例如：1000"
                         />
                         {/* Estimated Value Display */}
                         {fetchedPrice !== null && formData.initialBalance && !isNaN(parseFloat(formData.initialBalance)) && (
@@ -464,31 +443,31 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                     {/* Average Cost Input (Only for Investments) */}
                     {(formData.category === 'Stock' || formData.category === 'Crypto') && (
                         <div className="space-y-2">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('average_cost')}</Label>
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">平均成本</Label>
                             <MoneyInput
                                 value={formData.manualAvgCost}
                                 onChange={(e) => setFormData({ ...formData, manualAvgCost: e.target.value })}
-                                placeholder={fetchedPrice ? `${fetchedPrice}` : t('ph_average_cost')}
+                                placeholder={fetchedPrice ? `${fetchedPrice}` : '例如：100'}
                                 className="font-mono"
                             />
-                            <p className="text-[10px] text-muted-foreground pt-1">{t('avg_cost_desc')}</p>
+                            <p className="text-[10px] text-muted-foreground pt-1">依照目前市價計算，若不同請修改。</p>
                         </div>
                     )}
 
                     {/* Payment Due Day (Only for Liabilities - Credit Cards) */}
                     {formData.category === 'Liabilities' && (
                         <div className="space-y-2">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('payment_due_day')}</Label>
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">繳費日期</Label>
                             <Input
                                 type="number"
                                 min="1"
                                 max="31"
                                 value={formData.paymentDueDay}
                                 onChange={(e) => setFormData({ ...formData, paymentDueDay: e.target.value })}
-                                placeholder={t('payment_due_day_hint')}
+                                placeholder="1-31"
                                 className="font-mono"
                             />
-                            <p className="text-[10px] text-muted-foreground pt-1">{t('payment_due_day_desc')}</p>
+                            <p className="text-[10px] text-muted-foreground pt-1">每月需繳費的日期。</p>
                         </div>
                     )}
                 </div>
@@ -505,7 +484,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                             onChange={(e) => setFormData({ ...formData, includeInNetWorth: e.target.checked })}
                         />
                         <label htmlFor="includeInNetWorth" className="text-sm font-medium leading-none cursor-pointer">
-                            {t('include_in_net_worth')}
+                            計入淨值計算
                         </label>
                     </div>
                 </div>
@@ -513,7 +492,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                 <div className="flex justify-end pt-4">
                     {/* <Button type="button" variant="ghost" onClick={onClose} className="mr-2">{t('cancel')}</Button> */}
                     <Button type="submit" disabled={loading}>
-                        {loading ? 'Creating...' : t('add_asset')}
+                        {loading ? '新增中...' : '新增資產'}
                     </Button>
                 </div>
             </form>

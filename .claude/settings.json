@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001)",
+      "mcp__plugin_playwright_playwright__browser_evaluate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "Bash(npx tsc *)",
+      "mcp__plugin_playwright_playwright__browser_resize",
+      "Bash(npx next *)",
+      "Bash(node_modules/.bin/next lint *)",
+      "Bash(node_modules/.bin/eslint --ext .ts,.tsx app/ components/ lib/)",
+      "Bash(grep -v \"^$\")",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(cat /tmp/nextjs-new.log | tail -20)",
+      "Read(//tmp/**)",
+      "Bash(cat /home/yuunjee/package.json 2>/dev/null | head -20; echo \"---\"; ls /home/yuunjee/package*.json 2>/dev/null)",
+      "Read(//home/yuunjee/**)",
+      "mcp__plugin_playwright_playwright__browser_click"
+    ]
+  }
+}

@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useLanguage } from '@/components/LanguageProvider';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from '@/components/ui/MoneyInput';
 import { transferFunds } from '@/lib/api';
-import { ArrowRightLeft, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { Asset } from '@/lib/types';
 
@@ -20,7 +19,6 @@ interface TransferViewProps {
 
 export function TransferView({ onClose, assets, initialFromAssetId, onBack }: TransferViewProps) {
     const router = useRouter();
-    const { t } = useLanguage();
     const [loading, setLoading] = useState(false);
 
     // Sort assets by name to make it easier to find
@@ -76,9 +74,9 @@ export function TransferView({ onClose, assets, initialFromAssetId, onBack }: Tr
             router.refresh();
             onClose();
             setFormData({ fromId: '', toId: '', amount: '', fee: '', date: '' });
-        } catch (error: any) {
+        } catch (error) {
             console.error("Transfer failed", error);
-            alert(error.message);
+            alert(error instanceof Error ? error.message : '轉移失敗');
         } finally {
             setLoading(false);
         }
@@ -90,14 +88,14 @@ export function TransferView({ onClose, assets, initialFromAssetId, onBack }: Tr
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label>{t('from')}</Label>
+                        <Label>從</Label>
                         <select
                             className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
                             value={formData.fromId}
                             onChange={(e) => setFormData({ ...formData, fromId: e.target.value })}
                             required
                         >
-                            <option value="">{t('select_source')}</option>
+                            <option value="">選擇來源帳戶</option>
                             {Object.entries(
                                 sortedAssets.reduce((acc, asset) => {
                                     const cat = asset.category || 'Other';
@@ -115,7 +113,7 @@ export function TransferView({ onClose, assets, initialFromAssetId, onBack }: Tr
                         </select>
                         {formData.fromId && (
                             <div className="text-xs text-muted-foreground text-right px-1">
-                                {t('balance')}: ${new Intl.NumberFormat('en-US').format(
+                                餘額: ${new Intl.NumberFormat('en-US').format(
                                     assets.find(a => a.id === parseInt(formData.fromId))?.value_twd ??
                                     ((assets.find(a => a.id === parseInt(formData.fromId))?.current_price || 0) *
                                         (assets.find(a => a.id === parseInt(formData.fromId))?.transactions?.reduce((sum: number, t) => sum + t.amount, 0) || 0))
@@ -125,14 +123,14 @@ export function TransferView({ onClose, assets, initialFromAssetId, onBack }: Tr
                     </div>
 
                     <div className="space-y-2">
-                        <Label>{t('to')}</Label>
+                        <Label>至</Label>
                         <select
                             className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
                             value={formData.toId}
                             onChange={(e) => setFormData({ ...formData, toId: e.target.value })}
                             required
                         >
-                            <option value="">{t('select_destination')}</option>
+                            <option value="">選擇轉入帳戶</option>
                             {Object.entries(
                                 sortedAssets.reduce((acc, asset) => {
                                     const cat = asset.category || 'Other';
@@ -150,7 +148,7 @@ export function TransferView({ onClose, assets, initialFromAssetId, onBack }: Tr
                         </select>
                         {formData.toId && (
                             <div className="text-xs text-muted-foreground text-right px-1">
-                                {t('balance')}: ${new Intl.NumberFormat('en-US').format(
+                                餘額: ${new Intl.NumberFormat('en-US').format(
                                     assets.find(a => a.id === parseInt(formData.toId))?.value_twd ??
                                     ((assets.find(a => a.id === parseInt(formData.toId))?.current_price || 0) *
                                         (assets.find(a => a.id === parseInt(formData.toId))?.transactions?.reduce((sum: number, t) => sum + t.amount, 0) || 0))
@@ -164,7 +162,7 @@ export function TransferView({ onClose, assets, initialFromAssetId, onBack }: Tr
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label>{t('amount')}</Label>
+                        <Label>金額</Label>
                         <MoneyInput
                             value={formData.amount}
                             onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
@@ -174,7 +172,7 @@ export function TransferView({ onClose, assets, initialFromAssetId, onBack }: Tr
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>{t('fee_optional')}</Label>
+                        <Label>手續費 (選填)</Label>
                         <MoneyInput
                             value={formData.fee}
                             onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
@@ -185,7 +183,7 @@ export function TransferView({ onClose, assets, initialFromAssetId, onBack }: Tr
                 </div>
 
                 <div className="space-y-2">
-                    <Label>{t('date_optional')}</Label>
+                    <Label>日期 (選填)</Label>
                     <Input
                         type="datetime-local"
                         value={formData.date}
@@ -196,13 +194,13 @@ export function TransferView({ onClose, assets, initialFromAssetId, onBack }: Tr
                 <div className="flex justify-between pt-4">
                     {onBack && (
                         <Button type="button" variant="ghost" onClick={onBack}>
-                            <ArrowLeft className="w-4 h-4 mr-1" /> {t('back')}
+                            <ArrowLeft className="w-4 h-4 mr-1" /> 返回
                         </Button>
                     )}
                     <div className="flex gap-2 ml-auto">
                         {/* <Button type="button" variant="ghost" onClick={onClose}>{t('cancel')}</Button> */}
                         <Button type="submit" disabled={loading || !formData.fromId || !formData.toId || !formData.amount}>
-                            {loading ? t('transferring') : t('confirm')}
+                            {loading ? '轉移中...' : '確認'}
                         </Button>
                     </div>
                 </div>

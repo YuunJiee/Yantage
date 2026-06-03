@@ -29,8 +29,11 @@ async def lifespan(app: FastAPI):
 
     # Apply all pending Alembic migrations (creates tables on first run,
     # applies incremental changes on subsequent runs).
-    from . import migrations as db_migrations
-    db_migrations.run_migrations()
+    from alembic import command as alembic_command
+    from alembic.config import Config
+    import os
+    alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "alembic.ini"))
+    alembic_command.upgrade(alembic_cfg, "head")
 
     # Start background scheduler
     from . import scheduler as sched_module

@@ -17,7 +17,7 @@ export interface Asset {
     id: number;
     name: string;
     ticker?: string | null;
-    category: 'Fluid' | 'Stock' | 'Crypto' | 'Fixed' | 'Receivables' | 'Liabilities';
+    category: 'Fluid' | 'Investment' | 'Stock' | 'Crypto' | 'Fixed' | 'Receivables' | 'Liabilities';
     sub_category?: string | null;
     source?: string;
     icon?: string | null;

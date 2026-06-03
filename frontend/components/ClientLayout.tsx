@@ -1,58 +1,36 @@
 'use client';
 
-import { useState } from 'react';
 import { SWRConfig } from 'swr';
-import { PrivacyProvider } from "@/components/PrivacyProvider";
-import { ThemeProvider } from "@/components/ThemeProvider";
-import { GlobalThemeProvider } from "@/components/GlobalThemeProvider";
-import { AppSidebar } from "./AppSidebar";
-import { BottomNav } from "./BottomNav";
-import { cn } from "@/lib/utils";
-import { LanguageProvider } from "@/components/LanguageProvider";
-import { ToastProvider } from "@/components/ui/toast";
+import { PrivacyProvider } from '@/components/PrivacyProvider';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { GlobalThemeProvider } from '@/components/GlobalThemeProvider';
+import { TopBar } from '@/components/TopBar';
+import { ToastProvider } from '@/components/ui/toast';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-
     return (
         <SWRConfig value={{
             revalidateOnFocus: false,
             revalidateOnReconnect: true,
-            dedupingInterval: 10_000,
+            dedupingInterval: 30000,
             errorRetryCount: 2,
         }}>
             <ThemeProvider
                 attribute="class"
-                defaultTheme="system"
-                enableSystem
+                forcedTheme="light"
                 disableTransitionOnChange
             >
                 <GlobalThemeProvider>
-                    <LanguageProvider>
-                        <PrivacyProvider>
-                            <ToastProvider>
-                            <div className="flex min-h-screen bg-background text-foreground">
-                                <AppSidebar
-                                    isCollapsed={isSidebarCollapsed}
-                                    toggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                                />
-                                <main className={cn(
-                                    // flex-1 + min-w-0: prevents the flex child from having a 0 or negative
-                                    // computed width, which would cause Recharts ResponsiveContainer to
-                                    // measure width=-1 and log warnings.
-                                    "flex-1 min-w-0 transition-all duration-300",
-                                    // pt-14: offset for the mobile hamburger button at top-left
-                                    // pb-16: offset for the mobile bottom navigation bar
-                                    "pt-14 md:pt-0 pb-16 md:pb-0",
-                                    isSidebarCollapsed ? "ml-[60px]" : "ml-0 md:ml-[280px]"
-                                )}>
+                    <PrivacyProvider>
+                        <ToastProvider>
+                            <div className="min-h-screen bg-background text-foreground">
+                                <TopBar />
+                                <main className="min-h-[calc(100vh-3.5rem)]">
                                     {children}
                                 </main>
-                                <BottomNav />
                             </div>
-                            </ToastProvider>
-                        </PrivacyProvider>
-                    </LanguageProvider>
+                        </ToastProvider>
+                    </PrivacyProvider>
                 </GlobalThemeProvider>
             </ThemeProvider>
         </SWRConfig>

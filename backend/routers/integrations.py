@@ -3,7 +3,11 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..database import get_db
 from ..services.providers import PROVIDERS
-from ..utils.masking import mask_api_key
+
+def __mask_api_key(key: str | None) -> str | None:
+    if not key:
+        return None
+    return f"{key[:4]}...{key[-4:]}" if len(key) > 8 else "****"
 
 router = APIRouter(
     prefix="/api/integrations",
@@ -18,7 +22,7 @@ def get_connections(db: Session = Depends(get_db)):
             id=c.id,
             name=c.name,
             provider=c.provider,
-            api_key_masked=mask_api_key(c.api_key),
+            api_key_masked=_mask_api_key(c.api_key),
             address=c.address,
             is_active=c.is_active,
         )
@@ -41,7 +45,7 @@ def create_connection(conn: schemas.ConnectionCreate, db: Session = Depends(get_
         id=new_conn.id,
         name=new_conn.name,
         provider=new_conn.provider,
-        api_key_masked=mask_api_key(new_conn.api_key),
+        api_key_masked=_mask_api_key(new_conn.api_key),
         address=new_conn.address,
         is_active=new_conn.is_active,
     )

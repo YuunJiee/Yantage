@@ -1,7 +1,7 @@
-"""Unit tests for price_service and alert_service.
+"""Unit tests for price_service.
 
-External I/O (yfinance, ccxt, exchange rate DB queries) is fully mocked so
-the tests are fast and deterministic — no internet access required.
+External I/O (yfinance, ccxt) is fully mocked so the tests are fast and
+deterministic — no internet access required.
 """
 
 import pandas as pd
@@ -12,7 +12,6 @@ from unittest.mock import MagicMock, patch
 from backend import schemas
 from backend.repositories.asset_repo import AssetRepository
 from backend.services import price_service
-from backend.services.alert_service import check_alerts
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -73,19 +72,15 @@ def test_fetch_crypto_price_stablecoin_usdc():
 
 
 def test_fetch_crypto_price_btc(mocker):
-    exchange_mock = MagicMock()
-    exchange_mock.fetch_ticker.return_value = {"last": 3_000_000.0}
-    mocker.patch("backend.services.price_service.ccxt.binance", return_value=exchange_mock)
+    mocker.patch.object(price_service._binance, "fetch_ticker", return_value={"last": 3_000_000.0})
 
     price = price_service.fetch_crypto_price("BTC")
     assert price == pytest.approx(3_000_000.0)
-    exchange_mock.fetch_ticker.assert_called_once_with("BTC/USDT")
+    price_service._binance.fetch_ticker.assert_called_once_with("BTC/USDT")
 
 
 def test_fetch_crypto_price_eth(mocker):
-    exchange_mock = MagicMock()
-    exchange_mock.fetch_ticker.return_value = {"last": 120_000.0}
-    mocker.patch("backend.services.price_service.ccxt.binance", return_value=exchange_mock)
+    mocker.patch.object(price_service._binance, "fetch_ticker", return_value={"last": 120_000.0})
 
     price = price_service.fetch_crypto_price("ETH")
     assert price == pytest.approx(120_000.0)
@@ -93,100 +88,13 @@ def test_fetch_crypto_price_eth(mocker):
 
 def test_fetch_crypto_price_weth_normalised_to_eth(mocker):
     """WETH should be looked up as ETH/USDT."""
-    exchange_mock = MagicMock()
-    exchange_mock.fetch_ticker.return_value = {"last": 120_000.0}
-    mocker.patch("backend.services.price_service.ccxt.binance", return_value=exchange_mock)
+    mocker.patch.object(price_service._binance, "fetch_ticker", return_value={"last": 120_000.0})
 
     price_service.fetch_crypto_price("WETH")
-    exchange_mock.fetch_ticker.assert_called_once_with("ETH/USDT")
+    price_service._binance.fetch_ticker.assert_called_once_with("ETH/USDT")
 
 
 def test_fetch_crypto_price_exception_returns_zero(mocker):
-    mocker.patch("backend.services.price_service.ccxt.binance", side_effect=Exception("api error"))
+    mocker.patch.object(price_service._binance, "fetch_ticker", side_effect=Exception("api error"))
     price = price_service.fetch_crypto_price("SOL")
     assert price == 0.0
-
-
-# ── check_alerts ─────────────────────────────────────────────────────────────
-
-@pytest.fixture
-def db_with_asset(db):
-    """Return a (db, asset) tuple with one Crypto asset seeded."""
-    asset = AssetRepository(db).create(schemas.AssetCreate(
-        name="Bitcoin", category="Crypto", ticker="BTC", current_price=90_000.0
-    ))
-    return db, asset
-
-
-def _make_alert(db, asset_id: int, condition: str, target: float):
-    from backend.models import Alert
-    alert = Alert(
-        asset_id=asset_id,
-        condition=condition,
-        target_price=target,
-        is_active=True,
-    )
-    db.add(alert)
-    db.commit()
-    db.refresh(alert)
-    return alert
-
-
-def test_check_alerts_above_triggers(db_with_asset):
-    db, asset = db_with_asset
-    alert = _make_alert(db, asset.id, "ABOVE", target=95_000.0)
-
-    check_alerts(db, asset.id, price=100_000.0)
-    db.refresh(alert)
-    assert alert.triggered_at is not None
-
-
-def test_check_alerts_above_not_triggered_below_target(db_with_asset):
-    db, asset = db_with_asset
-    alert = _make_alert(db, asset.id, "ABOVE", target=95_000.0)
-
-    check_alerts(db, asset.id, price=80_000.0)
-    db.refresh(alert)
-    assert alert.triggered_at is None
-
-
-def test_check_alerts_below_triggers(db_with_asset):
-    db, asset = db_with_asset
-    alert = _make_alert(db, asset.id, "BELOW", target=85_000.0)
-
-    check_alerts(db, asset.id, price=84_000.0)
-    db.refresh(alert)
-    assert alert.triggered_at is not None
-
-
-def test_check_alerts_below_not_triggered_above_target(db_with_asset):
-    db, asset = db_with_asset
-    alert = _make_alert(db, asset.id, "BELOW", target=85_000.0)
-
-    check_alerts(db, asset.id, price=90_000.0)
-    db.refresh(alert)
-    assert alert.triggered_at is None
-
-
-def test_check_alerts_already_triggered_not_overwritten(db_with_asset):
-    """An alert that already has triggered_at should not be overwritten."""
-    db, asset = db_with_asset
-    alert = _make_alert(db, asset.id, "ABOVE", target=95_000.0)
-    first_trigger = datetime(2025, 1, 1, 12, 0, 0)
-    alert.triggered_at = first_trigger
-    db.commit()
-
-    check_alerts(db, asset.id, price=100_000.0)
-    db.refresh(alert)
-    assert alert.triggered_at == first_trigger
-
-
-def test_check_alerts_inactive_alert_ignored(db_with_asset):
-    db, asset = db_with_asset
-    alert = _make_alert(db, asset.id, "ABOVE", target=95_000.0)
-    alert.is_active = False
-    db.commit()
-
-    check_alerts(db, asset.id, price=100_000.0)
-    db.refresh(alert)
-    assert alert.triggered_at is None

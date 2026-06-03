@@ -7,9 +7,13 @@ const BACKEND_ORIGIN =
     .replace(/\/api\/?$/, "");
 
 const nextConfig: NextConfig = {
-  // Standalone output bundles only the files needed to run the app —
-  // required for the minimal Docker image (see frontend/Dockerfile).
   output: "standalone",
+
+  // Prevent Turbopack from climbing to the repo root when it finds another
+  // package-lock.json there, which breaks CSS resolution.
+  turbopack: {
+    root: __dirname,
+  },
 
   async rewrites() {
     return [

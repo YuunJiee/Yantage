@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Dialog } from '@/components/ui/dialog';
-import { useLanguage } from '@/components/LanguageProvider';
 import { AssetHistoryView } from './views/AssetHistoryView';
 import { EditAssetView } from './views/EditAssetView';
 import { QuickAdjustView } from './views/QuickAdjustView';
@@ -28,14 +27,13 @@ interface DynamicContentProps {
 }
 
 export function AssetActionDialog({ isOpen, onClose, asset, allAssets, initialMode = 'history' }: AssetActionDialogProps) {
-    const { t } = useLanguage();
     const [mode, setMode] = useState(initialMode);
 
-    // Sync mode when dialog opens/closes
+    // Reset mode whenever the dialog (re-)opens
     useEffect(() => {
-        if (isOpen) {
-            setMode(initialMode);
-        }
+        if (!isOpen) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setMode(initialMode);
     }, [isOpen, initialMode]);
 
     if (!asset && mode !== 'transfer') return null;
@@ -43,12 +41,12 @@ export function AssetActionDialog({ isOpen, onClose, asset, allAssets, initialMo
     const getTitle = () => {
         switch (mode) {
             case 'edit':
-                return t('edit_asset');
+                return '編輯資產';
             case 'adjust':
             case 'set':
-                return `${t('adjust_balance')}: ${asset?.name}`;
+                return `調整餘額: ${asset?.name}`;
             case 'transfer':
-                return t('transfer_funds');
+                return '資產轉移';
             case 'history':
             default:
                 return asset?.name || '';

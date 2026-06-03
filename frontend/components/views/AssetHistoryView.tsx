@@ -1,8 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { useLanguage } from '@/components/LanguageProvider';
 import { cn } from '@/lib/utils';
-import { TrendingUp, TrendingDown, ArrowRightLeft, Pencil, Wallet, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowRightLeft, Pencil, Wallet } from 'lucide-react';
 import { AssetHistoryChart } from '../AssetHistoryChart';
 import type { Asset } from '@/lib/types';
 
@@ -16,155 +13,125 @@ interface AssetHistoryDialogProps {
 }
 
 export function AssetHistoryView({ asset, onEdit, onAdjustBalance, onTransfer }: Omit<AssetHistoryDialogProps, 'isOpen' | 'onClose'>) {
-    const { t } = useLanguage();
-
     if (!asset) return null;
 
-    // Sort transactions by date (newest first)
     const sortedTransactions = [...(asset.transactions || [])].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 
-    // Calculate running balance
-    let runningBalance = 0;
-    const transactionsWithBalance = sortedTransactions.reverse().map(tx => {
-        runningBalance += tx.amount;
-        return {
-            ...tx,
-            balance: runningBalance
-        };
-    }).reverse();
+    const transactionsWithBalance = sortedTransactions
+        .slice()
+        .reverse()
+        .reduce<(typeof sortedTransactions[number] & { balance: number })[]>((acc, tx) => {
+            const prev = acc.length > 0 ? acc[acc.length - 1].balance : 0;
+            acc.push({ ...tx, balance: prev + tx.amount });
+            return acc;
+        }, [])
+        .reverse();
 
     const totalQuantity = asset.transactions?.reduce((sum, tx) => sum + tx.amount, 0) || 0;
     const totalValue = (asset.current_price ?? 0) * totalQuantity;
     const isCrypto = asset.sub_category?.includes('Crypto');
 
+    const isManaged = ['max', 'pionex', 'binance'].includes(asset['source'] || '');
+
     return (
-        <div className="space-y-4">
-            {/* Actions Toolbar */}
-            <div className="flex justify-end gap-2">
-                {['max', 'pionex', 'binance'].includes(asset['source'] || '') ? (
-                    <div className="flex items-center text-xs text-muted-foreground mr-auto bg-muted/50 px-3 py-1 rounded-full">
-                        {t('managed_by_integration')}
-                    </div>
+        <div className="space-y-5">
+            {/* Action toolbar */}
+            <div className="flex items-center justify-between">
+                {isManaged ? (
+                    <span className="text-xs text-muted-foreground">由整合自動管理</span>
                 ) : (
-                    <>
-                        <Button
-                            variant="ghost"
-                            onClick={() => {
-                                if (onAdjustBalance) onAdjustBalance();
-                            }}
-                            className="w-10 h-10 p-0 hover:bg-green-500/10 hover:text-green-600"
-                            title={t('adjust_balance')}
+                    <span />
+                )}
+                {!isManaged && (
+                    <div className="flex gap-1 ml-auto">
+                        <button
+                            onClick={onAdjustBalance}
+                            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                            title="調整餘額"
                         >
-                            <Wallet className="w-5 h-5" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            onClick={() => {
-                                if (onTransfer) onTransfer();
-                            }}
-                            className="w-10 h-10 p-0 hover:bg-blue-500/10 hover:text-blue-600"
-                            title={t('transfer')}
+                            <Wallet className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={onTransfer}
+                            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                            title="資產轉移"
                         >
-                            <ArrowRightLeft className="w-5 h-5" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            onClick={() => {
-                                if (onEdit) onEdit();
-                            }}
-                            className="w-10 h-10 p-0 hover:bg-primary/10"
-                            title={t('edit')}
+                            <ArrowRightLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={onEdit}
+                            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                            title="編輯"
                         >
-                            <Pencil className="w-5 h-5" />
-                        </Button>
-                    </>
+                            <Pencil className="w-4 h-4" />
+                        </button>
+                    </div>
                 )}
             </div>
-            {/* Asset Summary */}
-            <div className="bg-muted/50 rounded-2xl p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <div className="text-sm text-muted-foreground">{t('current_holdings')}</div>
-                        <div className="text-2xl font-bold tabular-nums">
-                            {totalQuantity.toLocaleString(undefined, {
-                                minimumFractionDigits: isCrypto ? 8 : 0,
-                                maximumFractionDigits: isCrypto ? 8 : 2
-                            })}
-                        </div>
+
+            {/* Summary */}
+            <div className="grid grid-cols-2 divide-x divide-border/50 pb-4 border-b border-border/50">
+                <div className="pr-4">
+                    <div className="text-xs text-muted-foreground mb-1">目前持倉</div>
+                    <div className="text-xl font-bold tabular-nums">
+                        {totalQuantity.toLocaleString(undefined, {
+                            minimumFractionDigits: isCrypto ? 8 : 0,
+                            maximumFractionDigits: isCrypto ? 8 : 2
+                        })}
                     </div>
-                    <div className="text-right">
-                        <div className="text-sm text-muted-foreground">{t('value_twd')}</div>
-                        <div className="text-2xl font-bold tabular-nums">
-                            ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                        </div>
+                </div>
+                <div className="pl-4">
+                    <div className="text-xs text-muted-foreground mb-1">市值 (TWD)</div>
+                    <div className="text-xl font-bold tabular-nums">
+                        ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </div>
                 </div>
                 {asset.ticker && (
-                    <div className="flex items-center justify-between pt-2 border-t border-border">
-                        <div className="text-xs text-muted-foreground">{t('ticker')}</div>
-                        <div className="text-sm font-medium">{asset.ticker}</div>
+                    <div className="col-span-2 pt-2 mt-2 flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">代號</span>
+                        <span className="text-xs font-medium tabular-nums">{asset.ticker}</span>
                     </div>
                 )}
             </div>
 
             {/* Chart */}
-            <div className="bg-card rounded-2xl p-4 border border-border">
-                <div className="flex items-center gap-2 mb-4">
-                    <BarChart3 className="w-4 h-4 text-muted-foreground" />
-                    <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
-                        {t('history')}
-                    </h3>
-                </div>
+            <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">歷史走勢</h3>
                 <AssetHistoryChart assetId={asset.id} color={isCrypto ? "#f59e0b" : "#10b981"} />
             </div>
 
-            {/* Transaction History */}
+            {/* Transaction list */}
             <div>
                 <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
-                        {t('transaction_history')}
-                    </h3>
-                    <span className="text-xs text-muted-foreground">
-                        {sortedTransactions.length} {t('transactions')}
-                    </span>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">交易紀錄</h3>
+                    <span className="text-xs text-muted-foreground">{sortedTransactions.length} 筆</span>
                 </div>
 
                 {sortedTransactions.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                        {t('no_transactions_yet')}
-                    </div>
+                    <p className="text-sm text-muted-foreground py-4">尚無交易紀錄</p>
                 ) : (
-                    <div className="space-y-2 max-h-[35vh] md:max-h-96 overflow-y-auto">
+                    <div className="divide-y divide-border/50 max-h-[35vh] md:max-h-96 overflow-y-auto">
                         {transactionsWithBalance.map((tx) => {
                             const isPositive = tx.amount > 0;
                             const isTransfer = tx.is_transfer;
 
                             return (
-                                <div
-                                    key={tx.id}
-                                    className="flex items-center justify-between p-3 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn(
-                                            "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                                            isTransfer ? "bg-blue-500/10" :
-                                                isPositive ? "bg-emerald-500/10" : "bg-red-500/10"
-                                        )}>
-                                            {isTransfer ? (
-                                                <ArrowRightLeft className={cn("w-4 h-4 text-blue-500")} />
-                                            ) : isPositive ? (
-                                                <TrendingUp className="w-4 h-4 text-emerald-500" />
-                                            ) : (
-                                                <TrendingDown className="w-4 h-4 text-red-500" />
-                                            )}
-                                        </div>
+                                <div key={tx.id} className="flex items-center justify-between py-2.5">
+                                    <div className="flex items-center gap-2.5">
+                                        {isTransfer ? (
+                                            <ArrowRightLeft className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                        ) : isPositive ? (
+                                            <TrendingUp className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                        ) : (
+                                            <TrendingDown className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                                        )}
                                         <div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1.5">
                                                 <span className={cn(
-                                                    "font-semibold tabular-nums",
-                                                    isPositive ? "text-emerald-500" : "text-red-500"
+                                                    'text-sm font-semibold tabular-nums',
+                                                    isPositive ? 'text-emerald-600' : 'text-red-500'
                                                 )}>
                                                     {isPositive ? '+' : ''}{tx.amount.toLocaleString(undefined, {
                                                         minimumFractionDigits: isCrypto ? 8 : 0,
@@ -172,13 +139,11 @@ export function AssetHistoryView({ asset, onEdit, onAdjustBalance, onTransfer }:
                                                     })}
                                                 </span>
                                                 {isTransfer && (
-                                                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400">
-                                                        {t('transfer')}
-                                                    </span>
+                                                    <span className="text-[10px] text-blue-500 font-medium">轉移</span>
                                                 )}
                                             </div>
-                                            <div className="text-xs text-muted-foreground">
-                                                {new Date(tx.date).toLocaleDateString()} • {t('balance')}: {tx.balance.toLocaleString(undefined, {
+                                            <div className="text-[11px] text-muted-foreground">
+                                                {new Date(tx.date).toLocaleDateString()} · 餘額 {tx.balance.toLocaleString(undefined, {
                                                     minimumFractionDigits: isCrypto ? 8 : 0,
                                                     maximumFractionDigits: isCrypto ? 8 : 2
                                                 })}
@@ -186,9 +151,9 @@ export function AssetHistoryView({ asset, onEdit, onAdjustBalance, onTransfer }:
                                         </div>
                                     </div>
                                     {!isTransfer && tx.buy_price > 0 && (
-                                        <div className="text-right">
-                                            <div className="text-xs text-muted-foreground">{t('price')}</div>
-                                            <div className="text-sm font-medium tabular-nums">
+                                        <div className="text-right shrink-0">
+                                            <div className="text-xs text-muted-foreground">成本</div>
+                                            <div className="text-xs font-medium tabular-nums">
                                                 {tx.buy_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </div>
                                         </div>
@@ -199,8 +164,6 @@ export function AssetHistoryView({ asset, onEdit, onAdjustBalance, onTransfer }:
                     </div>
                 )}
             </div>
-
-            {/* Actions moved to top */}
         </div>
     );
 }

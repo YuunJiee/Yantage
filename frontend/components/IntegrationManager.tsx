@@ -8,7 +8,6 @@ import { Dialog } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
 import { Trash2, Plus, Key, Wallet, Globe, RefreshCw, Bitcoin } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useLanguage } from "./LanguageProvider";
 import { API_URL } from '@/lib/api';
 
 interface Connection {
@@ -21,7 +20,6 @@ interface Connection {
 }
 
 export function IntegrationManager() {
-    const { t } = useLanguage();
     const [connections, setConnections] = useState<Connection[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -81,7 +79,7 @@ export function IntegrationManager() {
             } else {
                 alert("Failed to add connection");
             }
-        } catch (e) {
+        } catch {
             alert("Error adding connection");
         } finally {
             setLoading(false);
@@ -108,7 +106,7 @@ export function IntegrationManager() {
                 alert(`Synced ${provider} successfully!`);
                 router.refresh();
             } else alert("Sync failed.");
-        } catch (e) {
+        } catch {
             alert("Sync error.");
         }
     };
@@ -116,9 +114,9 @@ export function IntegrationManager() {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold tracking-tight">{t('integrations')}</h2>
+                <h2 className="text-xl font-semibold tracking-tight">串接整合</h2>
                 <Button onClick={() => setIsOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" /> {t('add_connection')}
+                    <Plus className="w-4 h-4 mr-2" /> 新增連線
                 </Button>
             </div>
 
@@ -149,7 +147,7 @@ export function IntegrationManager() {
                                 <span className="hidden md:inline">Sync</span>
                             </Button>
                             {conn.provider === 'wallet' && (
-                                <span className="text-[10px] text-muted-foreground ml-2 hidden md:inline">{t('sync_includes_scan')}</span>
+                                <span className="text-[10px] text-muted-foreground ml-2 hidden md:inline">包含自動掃描</span>
                             )}
                             <Button variant="ghost" onClick={() => handleDelete(conn.id)} className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive">
                                 <Trash2 className="w-4 h-4" />
@@ -160,15 +158,15 @@ export function IntegrationManager() {
 
                 {connections.length === 0 && (
                     <div className="col-span-full py-8 text-center text-muted-foreground text-sm border border-dashed border-border rounded-xl">
-                        {t('no_integrations')}
+                        尚未連接任何整合。新增一個來追蹤您的加密貨幣。
                     </div>
                 )}
             </div>
 
-            <Dialog isOpen={isOpen} onClose={() => setIsOpen(false)} title={t('add_integration')}>
+            <Dialog isOpen={isOpen} onClose={() => setIsOpen(false)} title="新增整合">
                 <div className="space-y-4 py-2">
                     <div className="space-y-2">
-                        <Label>{t('provider_type')}</Label>
+                        <Label>提供者類型</Label>
                         <Select value={newType} onChange={(e) => setNewType(e.target.value)}>
                             <option value="pionex">Pionex</option>
                             <option value="binance">Binance</option>
@@ -178,32 +176,32 @@ export function IntegrationManager() {
                     </div>
 
                     <div className="space-y-2">
-                        <Label>{t('name_optional')}</Label>
-                        <Input placeholder={t('placeholder_account')} value={newName} onChange={e => setNewName(e.target.value)} />
+                        <Label>名稱（可選）</Label>
+                        <Input placeholder="例如：主要帳戶" value={newName} onChange={e => setNewName(e.target.value)} />
                     </div>
 
                     {newType === 'wallet' ? (
                         <div className="space-y-2">
-                            <Label>{t('wallet_address')}</Label>
-                            <Input placeholder={t('placeholder_wallet')} value={address} onChange={e => setAddress(e.target.value)} className="font-mono" />
+                            <Label>錢包地址 (0x...)</Label>
+                            <Input placeholder="0x..." value={address} onChange={e => setAddress(e.target.value)} className="font-mono" />
                         </div>
                     ) : (
                         <>
                             <div className="space-y-2">
-                                <Label>{t('api_key')}</Label>
-                                <Input placeholder={t('enter_api_key')} value={apiKey} onChange={e => setApiKey(e.target.value)} className="font-mono" />
+                                <Label>API Key</Label>
+                                <Input placeholder="輸入 API Key..." value={apiKey} onChange={e => setApiKey(e.target.value)} className="font-mono" />
                             </div>
                             <div className="space-y-2">
-                                <Label>{t('api_secret')}</Label>
-                                <Input type="password" placeholder={t('enter_api_secret')} value={apiSecret} onChange={e => setApiSecret(e.target.value)} className="font-mono" />
+                                <Label>API Secret</Label>
+                                <Input type="password" placeholder="輸入 Secret..." value={apiSecret} onChange={e => setApiSecret(e.target.value)} className="font-mono" />
                             </div>
                         </>
                     )}
 
                     <div className="flex justify-end gap-2 pt-4">
-                        <Button variant="outline" onClick={() => setIsOpen(false)}>{t('cancel')}</Button>
+                        <Button variant="outline" onClick={() => setIsOpen(false)}>取消</Button>
                         <Button onClick={handleAdd} disabled={loading}>
-                            {loading ? t('adding') : t('add_integration')}
+                            {loading ? '新增中...' : '新增整合'}
                         </Button>
                     </div>
                 </div>

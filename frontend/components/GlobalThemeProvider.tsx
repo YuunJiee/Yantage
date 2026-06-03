@@ -28,19 +28,17 @@ export function GlobalThemeProvider({ children }: { children: React.ReactNode })
         document.body.setAttribute('data-chart-theme', 'Morandi');
     }
 
+    const applyTheme = (theme: ThemeName) => {
+        setThemeName(theme);
+        document.body.setAttribute('data-chart-theme', theme);
+    };
+
     useEffect(() => {
-        // Enforce Morandi theme
-        // Check if already set to avoid double-set
         if (document.body.getAttribute('data-chart-theme') !== 'Morandi') {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             applyTheme('Morandi');
         }
     }, []);
-
-    const applyTheme = (theme: ThemeName) => {
-        setThemeName(theme);
-        // Apply to document body for global CSS variables
-        document.body.setAttribute('data-chart-theme', theme);
-    };
 
     const updateTheme = async (newTheme: ThemeName) => {
         applyTheme(newTheme);

@@ -5,9 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { usePrivacy } from "@/components/PrivacyProvider";
-import { useLanguage } from "@/components/LanguageProvider";
 import { useNetWorthHistory } from '@/lib/hooks';
-import type { TranslationKey } from '@/src/i18n/dictionaries';
 
 interface DataPoint {
     date: string;
@@ -22,11 +20,11 @@ interface MonthlyChange {
 }
 
 export function MonthlyChangeChart() {
-    const { t, language } = useLanguage();
     const { isPrivacyMode } = usePrivacy();
     const [category, setCategory] = useState<string>('Total');
     const [mounted, setMounted] = useState(false);
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => { setMounted(true); }, []);
 
     const { history: originalData, isLoading } = useNetWorthHistory('1y');
@@ -90,9 +88,9 @@ export function MonthlyChangeChart() {
             <CardHeader className="pb-2 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0">
                 <div>
                     <CardTitle className="text-lg md:text-xl font-bold text-foreground">
-                        {t('monthly_change')}
+                        每月變動
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground">{t('pl_analysis')}</p>
+                    <p className="text-sm text-muted-foreground">損益分析</p>
                 </div>
                 <div className="flex gap-1 bg-muted p-1 rounded-lg overflow-x-auto scrollbar-hide">
                     {['Total', 'Fluid', 'Stock', 'Crypto', 'Receivables', 'Liabilities'].map(cat => (
@@ -106,8 +104,7 @@ export function MonthlyChangeChart() {
                                     : "text-muted-foreground hover:text-foreground"
                             )}
                         >
-                            {/* Use Mobile Short Keys */}
-                            {cat === 'Crypto' && language === 'zh-TW' ? '加密' : (t(`cat_${cat}` as TranslationKey) || cat)}
+                            {{'Total':'總計','Fluid':'流動','Stock':'股票','Crypto':'加密','Receivables':'應收','Liabilities':'負債'}[cat] ?? cat}
                         </button>
                     ))}
                 </div>
@@ -121,8 +118,8 @@ export function MonthlyChangeChart() {
                             <svg className="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                             </svg>
-                            <p className="text-sm">{t('no_data_available')}</p>
-                            <p className="text-xs mt-1 opacity-70">{t('add_assets_to_see_trends')}</p>
+                            <p className="text-sm">尚無資料</p>
+                            <p className="text-xs mt-1 opacity-70">新增資產以查看趨勢</p>
                         </div>
                     ) : (
                         <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1} debounce={50}>
@@ -139,15 +136,15 @@ export function MonthlyChangeChart() {
                                     axisLine={false}
                                     tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
                                     tickFormatter={(val) =>
-                                        isPrivacyMode ? '****' : '$' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0, notation: "compact" }).format(val)
+                                        isPrivacyMode ? '••••' : '$' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0, notation: "compact" }).format(val)
                                     }
                                 />
                                 <Tooltip
                                     cursor={{ fill: 'var(--muted)', opacity: 0.2 }}
                                     contentStyle={{ borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--foreground)' }}
-                                    formatter={(value: any) => [
-                                        isPrivacyMode ? '****' : `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(value)}`,
-                                        value >= 0 ? t('profit') : t('loss')
+                                    formatter={(value: number | undefined) => [
+                                        isPrivacyMode ? '••••' : `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(value ?? 0)}`,
+                                        (value ?? 0) >= 0 ? '獲利' : '虧損'
                                     ]}
                                 />
                                 <Bar dataKey="change" radius={[4, 4, 0, 0]}>

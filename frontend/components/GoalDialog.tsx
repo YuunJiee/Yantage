@@ -8,13 +8,11 @@ import { Label } from "@/components/ui/label";
 import { MoneyInput } from '@/components/ui/MoneyInput';
 import { CustomSelect } from "@/components/ui/custom-select";
 import { useRouter } from 'next/navigation';
-import { useLanguage } from "@/components/LanguageProvider";
 import { cn } from "@/lib/utils";
 
 import { API_URL } from '@/lib/api';
 import { Trash2 } from 'lucide-react';
 import type { Goal } from '@/lib/types';
-import type { TranslationKey } from '@/src/i18n/dictionaries';
 
 // Categories available for allocation goals
 const ALLOCATION_CATEGORIES = ['Fluid', 'Stock', 'Crypto', 'Fixed', 'Receivables'];
@@ -26,7 +24,7 @@ function parseAllocation(allocationData?: string): AllocationMap {
     try {
         const parsed = JSON.parse(allocationData);
         if (typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
-    } catch (_) { }
+    } catch { }
     // Legacy: plain category name string (pre-migration data)
     return { [allocationData]: 100 };
 }
@@ -39,7 +37,6 @@ interface GoalDialogProps {
 
 export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
     const router = useRouter();
-    const { t } = useLanguage();
     const [loading, setLoading] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
@@ -50,8 +47,8 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
     const [allocation, setAllocation] = useState<AllocationMap>({ Stock: 60, Fluid: 20, Crypto: 20 });
 
     const goalTypes = [
-        { value: 'NET_WORTH', label: t('type_net_worth') },
-        { value: 'ASSET_ALLOCATION', label: t('type_asset_allocation') },
+        { value: 'NET_WORTH', label: 'FIRE / 淨值目標' },
+        { value: 'ASSET_ALLOCATION', label: '資產配置目標' },
     ];
 
     useEffect(() => {
@@ -131,7 +128,7 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
     // ----- Delete -----
     const handleDelete = async () => {
         if (!initialGoal) return;
-        if (!window.confirm(t('delete_goal_confirm'))) return;
+        if (!window.confirm('確定要刪除這個目標嗎？')) return;
         setDeleting(true);
         try {
             await fetch(`${API_URL}/goals/${initialGoal.id}`, { method: 'DELETE' });
@@ -148,36 +145,36 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
     const isValid = isAllocation ? Math.abs(total - 100) <= 0.01 : !!targetAmount;
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title={initialGoal ? t('update_financial_goal') : t('set_financial_goal')}>
+        <Dialog isOpen={isOpen} onClose={onClose} title={initialGoal ? '更新財務目標' : '設定財務目標'}>
             <form onSubmit={handleSubmit} className="space-y-5">
 
                 {/* Goal Type */}
                 <div className="space-y-2">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('goal_type_label')}</Label>
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">目標類型</Label>
                     <CustomSelect value={goalType} onChange={(v) => setGoalType(v as 'NET_WORTH' | 'ASSET_ALLOCATION')} options={goalTypes} />
                 </div>
 
                 {/* Goal Name */}
                 <div className="space-y-2">
-                    <Label>{t('goal_name')}</Label>
+                    <Label>目標名稱</Label>
                     <Input
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
-                        placeholder={isAllocation ? t('ph_allocation_goal') : t('ph_fire_goal')}
+                        placeholder={isAllocation ? '例如：股票目標' : '例如：FIRE 2030'}
                     />
                 </div>
 
                 {/* NET_WORTH: target amount */}
                 {!isAllocation && (
                     <div className="space-y-2">
-                        <Label>{t('target_amount_twd')}</Label>
+                        <Label>目標金額 (TWD)</Label>
                         <MoneyInput
                             className="font-mono"
                             value={targetAmount}
                             onChange={(e) => setTargetAmount(e.target.value)}
                             required
-                            placeholder={t('ph_target_amount')}
+                            placeholder="例如：30000000"
                         />
                     </div>
                 )}
@@ -187,14 +184,12 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                {t('allocation_targets')}
+                                資產配置目標
                             </Label>
                             {/* Total badge */}
                             <span className={cn(
-                                'text-xs font-bold px-2 py-0.5 rounded-full',
-                                Math.abs(total - 100) <= 0.01
-                                    ? 'bg-emerald-100 text-emerald-700'
-                                    : 'bg-red-100 text-red-700'
+                                'text-xs font-semibold tabular-nums',
+                                Math.abs(total - 100) <= 0.01 ? 'text-emerald-600' : 'text-red-500'
                             )}>
                                 {total.toFixed(0)}% / 100%
                             </span>
@@ -204,7 +199,7 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
                         <div className="space-y-2">
                             {Object.entries(allocation).map(([cat, pct]) => (
                                 <div key={cat} className="flex items-center gap-3">
-                                    <span className="w-24 text-sm font-medium shrink-0">{t(cat as TranslationKey) || cat}</span>
+                                    <span className="w-24 text-sm font-medium shrink-0">{({'Fluid':'流動資產','Investment':'投資','Stock':'股票','Crypto':'加密貨幣','Fixed':'固定資產','Receivables':'應收帳款','Liabilities':'負債'} as Record<string,string>)[cat] ?? cat}</span>
                                     <div className="relative flex-1">
                                         <Input
                                             type="number"
@@ -239,7 +234,7 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
                                         onClick={() => addCategory(cat)}
                                         className="text-xs px-2.5 py-1 rounded-full border border-dashed border-border hover:border-primary hover:text-primary transition-colors"
                                     >
-                                        + {t(cat as TranslationKey) || cat}
+                                        + {({'Fluid':'流動資產','Investment':'投資','Stock':'股票','Crypto':'加密貨幣','Fixed':'固定資產','Receivables':'應收帳款','Liabilities':'負債'} as Record<string,string>)[cat] ?? cat}
                                     </button>
                                 ))}
                             </div>
@@ -248,10 +243,10 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
                         {/* Remaining hint */}
                         {Math.abs(total - 100) > 0.01 && (
                             <p className="text-xs text-red-500">
-                                {remaining > 0 ? `${remaining.toFixed(0)}% ${t('allocation_remaining')}` : t('allocation_over')}
+                                {remaining > 0 ? `${remaining.toFixed(0)}% 尚未分配` : '總分超過 100%，請調整數字。'}
                             </p>
                         )}
-                        <p className="text-xs text-muted-foreground">{t('allocation_hint')}</p>
+                        <p className="text-xs text-muted-foreground">設定此類別應佔您總投資組合的目標比例。</p>
                     </div>
                 )}
 
@@ -265,11 +260,11 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
                             className="flex items-center gap-1.5 text-sm text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
                         >
                             <Trash2 className="w-4 h-4" />
-                            {deleting ? t('deleting') : t('delete_goal')}
+                            {deleting ? '刪除中...' : '刪除目標'}
                         </button>
                     ) : <span />}
                     <Button type="submit" disabled={loading || !isValid}>
-                        {loading ? t('saving') : (initialGoal ? t('update_goal_button') : t('set_goal_button'))}
+                        {loading ? '儲存中...' : (initialGoal ? '更新目標' : '設定目標')}
                     </Button>
                 </div>
             </form>

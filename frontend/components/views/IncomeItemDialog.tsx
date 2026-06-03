@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from '@/components/ui/MoneyInput';
 import { useState, useEffect } from "react";
-import { useLanguage } from "@/components/LanguageProvider";
 import { IncomeItem } from "@/lib/types";
 import { Trash2 } from "lucide-react";
 import { createIncomeItem, updateIncomeItem, deleteIncomeItem } from "@/lib/api";
@@ -19,8 +18,6 @@ interface IncomeItemDialogProps {
 }
 
 export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: IncomeItemDialogProps) {
-    const { t } = useLanguage();
-
     const [name, setName] = useState("");
     const [amount, setAmount] = useState("");
     const [loading, setLoading] = useState(false);
@@ -61,7 +58,7 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
 
     const handleDelete = async () => {
         if (!editingItem) return;
-        if (!confirm(t('delete_income_confirm'))) return;
+        if (!confirm('確定要刪除此收入項目嗎？')) return;
         try {
             setLoading(true);
             await deleteIncomeItem(editingItem.id);
@@ -78,20 +75,20 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
         <Dialog
             isOpen={open}
             onClose={() => onOpenChange(false)}
-            title={editingItem ? (t('edit_income') as string) : (t('add_income') as string)}
+            title={editingItem ? '編輯收入' : '新增收入'}
         >
             <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                    <Label htmlFor="income-name">{t('name') as string}</Label>
+                    <Label htmlFor="income-name">名稱</Label>
                     <Input
                         id="income-name"
-                        placeholder={t('income_name_placeholder') as string}
+                        placeholder="例如：薪資、兼職、助教..."
                         value={name}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
                     />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="income-amount">{t('expected_income')}</Label>
+                    <Label htmlFor="income-amount">預期收入</Label>
                     <MoneyInput
                         id="income-amount"
                         value={amount}
@@ -107,10 +104,10 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
                 ) : <div></div>}
                 <div className="space-x-2">
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-                        {t('collapse') as string}
+                        取消
                     </Button>
                     <Button onClick={handleSave} disabled={loading || !name || !amount}>
-                        {loading ? "..." : (t('save_changes') as string)}
+                        {loading ? "..." : '儲存變更'}
                     </Button>
                 </div>
             </div>
