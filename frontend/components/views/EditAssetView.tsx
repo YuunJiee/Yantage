@@ -200,7 +200,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                                 value={formData.paymentDueDay}
                                 onChange={(e) => setFormData({ ...formData, paymentDueDay: e.target.value })}
                                 placeholder="1-31"
-                                className="font-mono h-11 rounded-xl"
+                                className="tabular-nums h-11 rounded-xl"
                             />
                             <p className="text-[10px] text-muted-foreground pt-1">每月需繳費的日期。</p>
                         </div>

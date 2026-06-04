@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { MoneyInput } from '@/components/ui/MoneyInput';
 import { CustomSelect } from "@/components/ui/custom-select";
+import { cn } from '@/lib/utils';
 import { createAsset, createTransaction, lookupTicker, fetchIntegrations } from '@/lib/api';
 import type { IntegrationConnection } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -251,162 +251,141 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
     // Calc default icon for preview
     const defaultIconPreview = getDefaultIcon(formData.category, formData.subCategory);
 
+    const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">{children}</p>
+    );
+
     return (
         <Dialog isOpen={isOpen} onClose={onClose} title="新增資產">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-0">
 
-                {/* Row 1: Icon & Name */}
-                <div className="flex gap-4 items-end">
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">圖示</Label>
-                        <IconPicker
-                            value={formData.icon}
-                            onChange={(icon) => setFormData({ ...formData, icon })}
-                            defaultIcon={defaultIconPreview}
-                        />
-                    </div>
-                    <div className="flex-1 space-y-2">
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{"名稱"}</Label>
-                        <Input
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            placeholder={
-                                formData.category === 'Fluid' ? '例如：我的銀行帳戶' :
+                {/* ── 名稱 & 圖示 ───────────────────────── */}
+                <div className="pb-5">
+                    <div className="flex gap-3 items-end">
+                        <div className="space-y-1.5 shrink-0">
+                            <SectionLabel>圖示</SectionLabel>
+                            <IconPicker
+                                value={formData.icon}
+                                onChange={(icon) => setFormData({ ...formData, icon })}
+                                defaultIcon={defaultIconPreview}
+                            />
+                        </div>
+                        <div className="flex-1 space-y-1.5">
+                            <SectionLabel>名稱</SectionLabel>
+                            <Input
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                placeholder={
+                                    formData.category === 'Fluid' ? '例如：我的銀行帳戶' :
                                     formData.category === 'Stock' ? '例如：台積電' :
-                                        formData.category === 'Crypto' ? 'Bitcoin' : '資產名稱'
-                            }
-                        />
+                                    formData.category === 'Crypto' ? 'Bitcoin' : '資產名稱'
+                                }
+                            />
+                        </div>
                     </div>
                 </div>
 
-                {/* Row 2: Category & SubCategory */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className={`space-y-2 ${formData.category === 'Receivables' ? 'col-span-2' : ''}`}>
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">資產</Label>
+                {/* ── 分類 ──────────────────────────────── */}
+                <div className="border-t border-border/20 py-5">
+                    <SectionLabel>分類</SectionLabel>
+                    <div className="grid grid-cols-2 gap-3">
                         <CustomSelect
                             value={formData.category}
-                            onChange={(val) => {
-                                setFormData({
-                                    ...formData,
-                                    category: val,
-                                    subCategory: subCategories[val]?.[0] || ''
-                                });
-                                // Reset Market based on default subcategory if needed
-                            }}
+                            onChange={(val) => setFormData({ ...formData, category: val, subCategory: subCategories[val]?.[0] || '' })}
                             options={categories}
                         />
-                    </div>
-                    {formData.category !== 'Receivables' && (
-                        <div className="space-y-2">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">子類別</Label>
+                        {formData.category !== 'Receivables' && (
                             <CustomSelect
                                 value={formData.subCategory}
                                 onChange={(val) => {
                                     setFormData({ ...formData, subCategory: val });
-                                    // Auto-set market based on subcategory
                                     if (val === 'TW Stock') setMarket('TW');
                                     if (val === 'US Stock' || val === 'Mutual Fund') setMarket('US');
                                 }}
                                 options={(subCategories[formData.category] || []).map(sub => ({ value: sub, label: getSubCategoryLabel(sub) }))}
                             />
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
-                {/* Row 3: Investment Specifics */}
+                {/* ── 投資詳情（股票/加密） ─────────────── */}
                 {(formData.category === 'Stock' || formData.category === 'Crypto') && (
-                    <div className="space-y-4">
+                    <div className="border-t border-border/20 py-5 space-y-4">
+                        <SectionLabel>投資詳情</SectionLabel>
 
-                        {/* Source Selection for Crypto */}
+                        {/* Source toggle for Crypto */}
                         {formData.category === 'Crypto' && (
-                            <div className="space-y-2">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">來源</Label>
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setSource('manual')}
-                                        className={`flex-1 py-1.5 text-sm font-medium rounded-md border ${source === 'manual' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted border-input'}`}
-                                    >
-                                        Manual
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setSource('wallet')}
-                                        disabled={connections.length === 0}
-                                        className={`flex-1 py-1.5 text-sm font-medium rounded-md border ${source === 'wallet' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted border-input'} ${connections.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        Web3 Wallet
-                                    </button>
+                            <div className="space-y-1.5">
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">來源</p>
+                                <div className="flex gap-1 rounded-xl border border-border/60 bg-muted/40 p-1 w-fit">
+                                    {(['manual', 'wallet'] as const).map(s => (
+                                        <button
+                                            key={s}
+                                            type="button"
+                                            onClick={() => s !== 'wallet' || connections.length > 0 ? setSource(s) : undefined}
+                                            disabled={s === 'wallet' && connections.length === 0}
+                                            className={cn(
+                                                'rounded-lg px-4 py-1.5 text-xs font-medium transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed',
+                                                source === s
+                                                    ? 'bg-background text-foreground shadow-sm'
+                                                    : 'text-muted-foreground hover:text-foreground'
+                                            )}
+                                        >
+                                            {s === 'manual' ? '手動' : 'Web3 錢包'}
+                                        </button>
+                                    ))}
                                 </div>
-                                {connections.length === 0 && formData.category === 'Crypto' && (
-                                    <p className="text-[10px] text-muted-foreground">Go to Integrations to add a Web3 Wallet.</p>
+                                {connections.length === 0 && (
+                                    <p className="text-[10px] text-muted-foreground">請先透過首頁加密貨幣列的連結圖示新增錢包整合。</p>
                                 )}
                             </div>
                         )}
 
+                        {/* Wallet fields */}
                         {source === 'wallet' && (
-                            <div className="grid grid-cols-2 gap-4 border-l-2 border-primary/20 pl-3">
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Connection</Label>
-                                    <CustomSelect
-                                        value={selectedConnectionId}
-                                        onChange={setSelectedConnectionId}
-                                        options={connections.map(c => ({ value: c.id.toString(), label: c.label ?? `Connection ${c.id}` }))}
-                                    />
+                            <div className="grid grid-cols-2 gap-3 pl-3 border-l-2 border-primary/20">
+                                <div className="space-y-1.5">
+                                    <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">連接</p>
+                                    <CustomSelect value={selectedConnectionId} onChange={setSelectedConnectionId}
+                                        options={connections.map(c => ({ value: c.id.toString(), label: c.label ?? `連接 ${c.id}` }))} />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Network</Label>
-                                    <CustomSelect
-                                        value={network}
-                                        onChange={setNetwork}
+                                <div className="space-y-1.5">
+                                    <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">網路</p>
+                                    <CustomSelect value={network} onChange={setNetwork}
                                         options={[
                                             { value: 'Ethereum', label: 'Ethereum' },
                                             { value: 'BSC', label: 'BSC' },
                                             { value: 'Scroll', label: 'Scroll' },
                                             { value: 'Arbitrum', label: 'Arbitrum' },
-                                        ]}
-                                    />
+                                        ]} />
                                 </div>
-                                <div className="space-y-2 col-span-2">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contract Address</Label>
-                                    <Input
-                                        value={contractAddress}
-                                        onChange={(e) => setContractAddress(e.target.value)}
-                                        placeholder="0x..."
-                                        className="font-mono text-xs"
-                                    />
+                                <div className="space-y-1.5 col-span-2">
+                                    <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">合約地址</p>
+                                    <Input value={contractAddress} onChange={(e) => setContractAddress(e.target.value)} placeholder="0x..." className="font-mono text-xs" />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Decimals</Label>
-                                    <Input
-                                        value={decimals}
-                                        onChange={(e) => setDecimals(e.target.value)}
-                                        placeholder="18"
-                                        type="number"
-                                        className="font-mono"
-                                    />
+                                <div className="space-y-1.5">
+                                    <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">小數位數</p>
+                                    <Input value={decimals} onChange={(e) => setDecimals(e.target.value)} placeholder="18" type="number" className="font-mono" />
                                 </div>
                             </div>
                         )}
 
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">股票代號</Label>
-                            </div>
+                        {/* Ticker */}
+                        <div className="space-y-1.5">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">
+                                {formData.category === 'Crypto' ? '幣種代號' : '股票代號'}
+                            </p>
                             <div className="relative">
                                 <Input
                                     value={formData.ticker}
-                                    onChange={(e) => {
-                                        setFormData({ ...formData, ticker: e.target.value });
-                                        if (!e.target.value) setFetchedPrice(null);
-                                    }}
+                                    onChange={(e) => { setFormData({ ...formData, ticker: e.target.value }); if (!e.target.value) setFetchedPrice(null); }}
                                     onBlur={handleTickerBlur}
                                     placeholder={market === 'TW' ? '例如：2330' : '例如：AAPL'}
-                                    className="pr-24 font-mono uppercase"
+                                    className="pr-28 font-mono uppercase"
                                 />
                                 {fetchedPrice !== null && (
-                                    <div className="absolute right-3 bottom-0 top-0 flex items-center">
-                                        <span className="text-[10px] font-mono text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-md border border-emerald-500/20">
+                                    <div className="absolute right-3 inset-y-0 flex items-center">
+                                        <span className="text-[10px] tabular-nums text-trend-up bg-trend-up-soft px-2 py-1 rounded-md">
                                             ${fetchedPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                                         </span>
                                     </div>
@@ -416,86 +395,78 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                     </div>
                 )}
 
-                {/* Row 4: Holdings & Valuation */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className={`space-y-2 ${formData.category !== 'Stock' && formData.category !== 'Crypto' ? 'col-span-2' : ''}`}>
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            {formData.category === 'Stock' ? '目前股數' :
-                                formData.category === 'Crypto' ? '目前持倉' :
-                                    '初始餘額'}
-                        </Label>
-                        <MoneyInput
-                            className="font-mono"
-                            value={formData.initialBalance}
-                            onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })}
-                            placeholder="例如：1000"
-                        />
-                        {/* Estimated Value Display */}
-                        {fetchedPrice !== null && formData.initialBalance && !isNaN(parseFloat(formData.initialBalance)) && (
-                            <div className="text-[10px] text-muted-foreground text-right px-1">
-                                ≈ <span className="font-medium text-foreground">
-                                    ${(fetchedPrice * parseFloat(formData.initialBalance)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                </span>
+                {/* ── 持倉 & 成本 ───────────────────────── */}
+                <div className="border-t border-border/20 py-5">
+                    <SectionLabel>
+                        {formData.category === 'Stock' ? '持股' :
+                         formData.category === 'Crypto' ? '持倉' : '初始金額'}
+                    </SectionLabel>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className={`space-y-1.5 ${formData.category !== 'Stock' && formData.category !== 'Crypto' ? 'col-span-2' : ''}`}>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">
+                                {formData.category === 'Stock' ? '股數' :
+                                 formData.category === 'Crypto' ? '數量' : '金額'}
+                            </p>
+                            <MoneyInput
+                                className="tabular-nums"
+                                value={formData.initialBalance}
+                                onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })}
+                                placeholder="例如：1000"
+                            />
+                            {fetchedPrice !== null && formData.initialBalance && !isNaN(parseFloat(formData.initialBalance)) && (
+                                <p className="text-[10px] text-muted-foreground text-right">
+                                    ≈ <span className="font-medium text-foreground tabular-nums">
+                                        ${(fetchedPrice * parseFloat(formData.initialBalance)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                    </span>
+                                </p>
+                            )}
+                        </div>
+
+                        {(formData.category === 'Stock' || formData.category === 'Crypto') && (
+                            <div className="space-y-1.5">
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">平均成本</p>
+                                <MoneyInput
+                                    value={formData.manualAvgCost}
+                                    onChange={(e) => setFormData({ ...formData, manualAvgCost: e.target.value })}
+                                    placeholder={fetchedPrice ? `${fetchedPrice}` : '例如：100'}
+                                    className="tabular-nums"
+                                />
+                                <p className="text-[10px] text-muted-foreground">依目前市價預填，可修改。</p>
+                            </div>
+                        )}
+
+                        {formData.category === 'Liabilities' && (
+                            <div className="space-y-1.5">
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">繳費日（每月）</p>
+                                <Input
+                                    type="number" min="1" max="31"
+                                    value={formData.paymentDueDay}
+                                    onChange={(e) => setFormData({ ...formData, paymentDueDay: e.target.value })}
+                                    placeholder="1–31"
+                                    className="tabular-nums"
+                                />
                             </div>
                         )}
                     </div>
-
-                    {/* Average Cost Input (Only for Investments) */}
-                    {(formData.category === 'Stock' || formData.category === 'Crypto') && (
-                        <div className="space-y-2">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">平均成本</Label>
-                            <MoneyInput
-                                value={formData.manualAvgCost}
-                                onChange={(e) => setFormData({ ...formData, manualAvgCost: e.target.value })}
-                                placeholder={fetchedPrice ? `${fetchedPrice}` : '例如：100'}
-                                className="font-mono"
-                            />
-                            <p className="text-[10px] text-muted-foreground pt-1">依照目前市價計算，若不同請修改。</p>
-                        </div>
-                    )}
-
-                    {/* Payment Due Day (Only for Liabilities - Credit Cards) */}
-                    {formData.category === 'Liabilities' && (
-                        <div className="space-y-2">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">繳費日期</Label>
-                            <Input
-                                type="number"
-                                min="1"
-                                max="31"
-                                value={formData.paymentDueDay}
-                                onChange={(e) => setFormData({ ...formData, paymentDueDay: e.target.value })}
-                                placeholder="1-31"
-                                className="font-mono"
-                            />
-                            <p className="text-[10px] text-muted-foreground pt-1">每月需繳費的日期。</p>
-                        </div>
-                    )}
                 </div>
 
-
-                {/* Include in Net Worth */}
-                <div className="pt-2 border-t border-border">
-                    <div className="flex items-center space-x-3 py-2">
+                {/* ── 設定 & 送出 ───────────────────────── */}
+                <div className="border-t border-border/20 pt-4 flex items-center justify-between">
+                    <label htmlFor="includeInNetWorth" className="flex items-center gap-2.5 cursor-pointer select-none">
                         <input
                             type="checkbox"
                             id="includeInNetWorth"
-                            className="w-5 h-5 rounded-md border-gray-300 text-primary focus:ring-primary accent-primary"
+                            className="w-4 h-4 rounded border-border text-primary accent-primary focus:ring-0"
                             checked={formData.includeInNetWorth}
                             onChange={(e) => setFormData({ ...formData, includeInNetWorth: e.target.checked })}
                         />
-                        <label htmlFor="includeInNetWorth" className="text-sm font-medium leading-none cursor-pointer">
-                            計入淨值計算
-                        </label>
-                    </div>
-                </div>
-
-                <div className="flex justify-end pt-4">
-                    {/* <Button type="button" variant="ghost" onClick={onClose} className="mr-2">{t('cancel')}</Button> */}
+                        <span className="text-sm text-muted-foreground">計入淨值計算</span>
+                    </label>
                     <Button type="submit" disabled={loading}>
-                        {loading ? '新增中...' : '新增資產'}
+                        {loading ? '新增中…' : '新增資產'}
                     </Button>
                 </div>
             </form>
-        </Dialog >
+        </Dialog>
     );
 }

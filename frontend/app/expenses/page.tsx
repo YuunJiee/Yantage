@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, Pencil, X, ShieldCheck, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Pencil, ShieldCheck, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Dialog } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { usePrivacy } from "@/components/PrivacyProvider";
 import { cn } from '@/lib/utils';
@@ -279,73 +281,99 @@ export default function BudgetPage() {
             <IncomeItemDialog open={isIncomeDialogOpen} onOpenChange={setIsIncomeDialogOpen} onSave={refreshIncome} editingItem={editingIncomeItem} />
 
             {/* Budget Dialog */}
-            {isBudgetDialogOpen && (
-                <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsBudgetDialogOpen(false)}>
-                    <div className="bg-background rounded-2xl border border-border p-6 w-full max-w-md shadow-xl animate-in zoom-in-95 duration-200 relative" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setIsBudgetDialogOpen(false)} className="absolute right-4 top-4 p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
-                            <X className="w-4 h-4" />
-                        </button>
+            <Dialog
+                isOpen={isBudgetDialogOpen}
+                onClose={() => setIsBudgetDialogOpen(false)}
+                title={editingBudgetId ? '編輯類別' : '新增類別'}
+            >
+                <form onSubmit={handleBudgetSubmit} className="space-y-0">
 
-                        <h2 className="text-base font-semibold mb-5">{editingBudgetId ? '編輯類別' : '新增類別'}</h2>
-
-                        <form onSubmit={handleBudgetSubmit} className="space-y-4">
-                            <div className="grid grid-cols-4 gap-3">
-                                <div>
-                                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">圖示</label>
-                                    <IconPicker value={budgetForm.icon} onChange={(icon: string) => setBudgetForm({ ...budgetForm, icon })} defaultIcon="ShoppingBag" className="w-full h-[42px] border-border rounded-xl" iconClassName="w-5 h-5 text-foreground" />
-                                </div>
-                                <div className="col-span-3">
-                                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">名稱</label>
-                                    <input className="w-full bg-muted/50 border border-border rounded-xl px-3 py-2 text-sm" placeholder="例如：食物、交通、娛樂" value={budgetForm.name} onChange={e => setBudgetForm({ ...budgetForm, name: e.target.value })} required />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">大項分類</label>
-                                <div className="flex flex-wrap gap-2">
-                                    {MACRO_GROUPS.map(g => (
-                                        <button key={g} type="button" onClick={() => setBudgetForm({ ...budgetForm, group_name: g })}
-                                            className={cn('px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors',
-                                                budgetForm.group_name === g ? 'bg-foreground text-background border-foreground' : 'bg-transparent border-border hover:bg-muted text-foreground'
-                                            )}>
-                                            {GROUP_ZH[g]}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">每月預算 (TWD)</label>
-                                <MoneyInput className="w-full bg-muted/50 border border-border rounded-xl px-3 py-2 text-sm" value={budgetForm.budget_amount} onChange={e => setBudgetForm({ ...budgetForm, budget_amount: e.target.value })} required />
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">顏色</label>
-                                <div className="flex gap-2 flex-wrap">
-                                    {COLOR_OPTIONS.map(c => (
-                                        <button key={c.value} type="button" onClick={() => setBudgetForm({ ...budgetForm, color: c.value })}
-                                            className={cn('w-6 h-6 rounded-full transition-all border-2', c.bar, budgetForm.color === c.value ? 'border-foreground scale-110' : 'border-transparent')} />
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">備註（選填）</label>
-                                <input className="w-full bg-muted/50 border border-border rounded-xl px-3 py-2 text-sm" placeholder="例如：包含外食和買菜" value={budgetForm.note} onChange={e => setBudgetForm({ ...budgetForm, note: e.target.value })} />
-                            </div>
-
-                            <div className="flex gap-3 pt-2">
-                                {editingBudgetId && (
-                                    <Button type="button" variant="destructive" className="shrink-0 px-3" onClick={handleBudgetDelete}>
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                )}
-                                <Button type="submit" className="flex-1">{editingBudgetId ? '儲存變更' : '新增類別'}</Button>
-                            </div>
-                        </form>
+                    {/* ── 圖示 & 名稱 ──────────────────────────── */}
+                    <div className="pb-5">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">名稱</p>
+                        <div className="flex gap-3 items-end">
+                            <IconPicker
+                                value={budgetForm.icon}
+                                onChange={(icon: string) => setBudgetForm({ ...budgetForm, icon })}
+                                defaultIcon="ShoppingBag"
+                                className="shrink-0 h-11 w-11 rounded-xl border-border"
+                                iconClassName="w-5 h-5 text-foreground"
+                            />
+                            <Input
+                                placeholder="例如：食物、交通、娛樂"
+                                value={budgetForm.name}
+                                onChange={e => setBudgetForm({ ...budgetForm, name: e.target.value })}
+                                required
+                                className="flex-1"
+                            />
+                        </div>
                     </div>
-                </div>
-            )}
+
+                    {/* ── 大項分類 ──────────────────────────────── */}
+                    <div className="border-t border-border/20 py-5">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">大項分類</p>
+                        <div className="flex flex-wrap gap-1.5">
+                            {MACRO_GROUPS.map(g => (
+                                <button key={g} type="button" onClick={() => setBudgetForm({ ...budgetForm, group_name: g })}
+                                    className={cn(
+                                        'px-3 py-1.5 rounded-lg border text-xs font-medium transition-all duration-150',
+                                        budgetForm.group_name === g
+                                            ? 'bg-foreground text-background border-foreground'
+                                            : 'bg-transparent border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground'
+                                    )}>
+                                    {GROUP_ZH[g]}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* ── 預算金額 ──────────────────────────────── */}
+                    <div className="border-t border-border/20 py-5">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">每月預算（TWD）</p>
+                        <MoneyInput
+                            className="tabular-nums"
+                            value={budgetForm.budget_amount}
+                            onChange={e => setBudgetForm({ ...budgetForm, budget_amount: e.target.value })}
+                            required
+                        />
+                    </div>
+
+                    {/* ── 顏色 ─────────────────────────────────── */}
+                    <div className="border-t border-border/20 py-5">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">顏色標記</p>
+                        <div className="flex gap-2.5 flex-wrap">
+                            {COLOR_OPTIONS.map(c => (
+                                <button key={c.value} type="button" onClick={() => setBudgetForm({ ...budgetForm, color: c.value })}
+                                    className={cn('w-7 h-7 rounded-full transition-all border-2', c.bar,
+                                        budgetForm.color === c.value ? 'border-foreground scale-110' : 'border-transparent hover:scale-105'
+                                    )} />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* ── 備註 ─────────────────────────────────── */}
+                    <div className="border-t border-border/20 py-5">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">備註（選填）</p>
+                        <Input
+                            placeholder="例如：包含外食和買菜"
+                            value={budgetForm.note}
+                            onChange={e => setBudgetForm({ ...budgetForm, note: e.target.value })}
+                        />
+                    </div>
+
+                    {/* ── 操作 ─────────────────────────────────── */}
+                    <div className="border-t border-border/20 pt-4 flex items-center justify-between">
+                        {editingBudgetId ? (
+                            <button type="button" onClick={handleBudgetDelete}
+                                className="flex items-center gap-1.5 text-sm text-destructive/70 hover:text-destructive transition-colors">
+                                <Trash2 className="w-3.5 h-3.5" />
+                                刪除
+                            </button>
+                        ) : <span />}
+                        <Button type="submit">{editingBudgetId ? '儲存變更' : '新增類別'}</Button>
+                    </div>
+                </form>
+            </Dialog>
         </div>
     );
 }

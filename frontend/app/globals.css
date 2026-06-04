@@ -244,6 +244,7 @@ html.dark body[data-chart-theme="Vibrant"],
     @apply bg-background text-foreground;
     overscroll-behavior: none;
     position: relative;
+    font-family: var(--font-plus-jakarta-sans), ui-sans-serif, system-ui, sans-serif;
   }
 
   /* Subtle paper grain — gives the warm Morandi background depth */
@@ -267,8 +268,10 @@ html.dark body[data-chart-theme="Vibrant"],
   }
 
   /* Ensure inputs always use 16px so iOS Safari doesn't auto-zoom into them */
+  /* Also force font-family inheritance — browsers don't auto-inherit for form elements */
   input, textarea, select {
     font-size: max(1rem, 16px);
+    font-family: inherit;
   }
 }
 

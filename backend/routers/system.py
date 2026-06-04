@@ -9,6 +9,8 @@ import os
 from .. import database
 from ..repositories.asset_repo import AssetRepository
 from ..services.providers import PROVIDERS
+from ..services.price_service import update_prices
+from ..services.snapshot_service import snapshot_net_worth
 
 router = APIRouter(
     prefix="/api/system",
@@ -82,3 +84,10 @@ def trigger_pionex_sync(db: Session = Depends(database.get_db)):
 def trigger_wallet_sync(db: Session = Depends(database.get_db)):
     success = PROVIDERS["wallet"].sync(db)
     return {"message": "Wallet assets synced successfully" if success else "Sync attempted (Check logs or API keys)"}
+
+@router.post("/refresh")
+def refresh_prices(db: Session = Depends(database.get_db)):
+    """Manually trigger price update + net worth snapshot."""
+    update_prices(db)
+    snapshot_net_worth(db)
+    return {"message": "報價已更新"}

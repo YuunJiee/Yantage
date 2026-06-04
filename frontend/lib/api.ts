@@ -1,6 +1,6 @@
 // Use relative path '/api' which works with Next.js Rewrites (proxy)
 // This avoids CORS and Mixed Content issues when deployed
-import { DashboardData, Asset, Transaction, BudgetCategory, RiskMetricsResponse, IncomeItem } from './types';
+import { DashboardData, Asset, Transaction, BudgetCategory, IncomeItem } from './types';
 
 const isServer = typeof window === 'undefined';
 export const API_URL = isServer
@@ -30,29 +30,6 @@ export async function apiFetch<T = unknown>(
         throw new Error(`API ${res.status} [${path}]${detail ? ': ' + detail : ''}`);
     }
     return res.json() as Promise<T>;
-}
-
-// Asset History
-export async function fetchAssetHistory(assetId: number, range: string = '1y') {
-    try {
-        const res = await fetch(`${API_URL}/stats/asset/${assetId}/history?range=${range}`, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return await res.json();
-    } catch (error) {
-        console.error("fetchAssetHistory failed:", error);
-        throw error;
-    }
-}
-
-export async function fetchRiskMetrics(): Promise<RiskMetricsResponse> {
-    try {
-        const res = await fetch(`${API_URL}/stats/risk_metrics`, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return await res.json();
-    } catch (error) {
-        console.error("fetchRiskMetrics failed:", error);
-        throw error;
-    }
 }
 
 export async function fetchDashboardData(): Promise<DashboardData> {

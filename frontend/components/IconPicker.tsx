@@ -52,16 +52,16 @@ export function IconPicker({ value, onChange, className, iconClassName, defaultI
                     )}
                 </button>
             </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-4 bg-card border-border" align="start">
+            <PopoverContent className="w-[260px] p-3 bg-card border-border" align="start">
                 <div className="mb-3">
                     <Input
-                        placeholder="Search icons..."
+                        placeholder="搜尋圖示..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        className="h-8 text-xs"
+                        className="h-9 text-sm"
                     />
                 </div>
-                <div className="grid grid-cols-6 gap-2 max-h-[200px] overflow-y-auto scrollbar-thin">
+                <div className="grid grid-cols-5 gap-2 max-h-[220px] overflow-y-auto">
                     {filteredIcons.map(name => {
                         const Icon = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[name];
                         if (!Icon) return null;
@@ -74,8 +74,8 @@ export function IconPicker({ value, onChange, className, iconClassName, defaultI
                                 type="button"
                                 onClick={() => onChange(name)}
                                 className={cn(
-                                    "flex items-center justify-center p-2 rounded-lg transition-all hover:bg-muted",
-                                    isSelected ? "bg-primary text-primary-foreground shadow-sm ring-2 ring-primary ring-offset-2" : "text-muted-foreground"
+                                    "flex items-center justify-center p-2.5 rounded-xl transition-all hover:bg-muted",
+                                    isSelected ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
                                 )}
                                 title={name}
                             >
@@ -85,7 +85,7 @@ export function IconPicker({ value, onChange, className, iconClassName, defaultI
                     })}
                 </div>
                 {filteredIcons.length === 0 && (
-                    <div className="text-center text-xs text-muted-foreground py-2">No icons found</div>
+                    <div className="text-center text-xs text-muted-foreground py-3">找不到圖示</div>
                 )}
             </PopoverContent>
         </Popover>

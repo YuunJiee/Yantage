@@ -54,7 +54,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onAddClic
     const getTranslatedSubCategory = (sub: string) => SUBCATEGORY_ZH[sub] ?? sub;
 
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-    const [dialogMode, setDialogMode] = useState<'history' | 'edit' | 'adjust' | 'set' | 'transfer'>('history');
+    const [dialogMode, setDialogMode] = useState<'history' | 'edit' | 'adjust'>('history');
 
     useEffect(() => {
         const saved = localStorage.getItem(`accordion_open_${category}`);
@@ -360,7 +360,6 @@ export function AssetAccordion({ category, title, totalAmount, assets, onAddClic
                     isOpen={!!selectedAsset}
                     onClose={handleCloseDialogs}
                     asset={selectedAsset}
-                    allAssets={assets}
                     initialMode={dialogMode}
                 />
             )}

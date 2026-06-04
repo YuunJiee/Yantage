@@ -147,77 +147,70 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
 
     return (
         <Dialog isOpen={isOpen} onClose={onClose} title={initialGoal ? '更新財務目標' : '設定財務目標'}>
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-0">
 
-                {/* Goal Type */}
-                <div className="space-y-2">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">目標類型</Label>
+                {/* ── 目標類型 ──────────────────────────── */}
+                <div className="pb-5">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">目標類型</p>
                     <CustomSelect value={goalType} onChange={(v) => setGoalType(v as 'NET_WORTH' | 'ASSET_ALLOCATION')} options={goalTypes} />
                 </div>
 
-                {/* Goal Name */}
-                <div className="space-y-2">
-                    <Label>目標名稱</Label>
+                {/* ── 基本資訊 ───────────────────────────── */}
+                <div className="border-t border-border/20 py-5 space-y-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">目標名稱</p>
                     <Input
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
-                        placeholder={isAllocation ? '例如：股票目標' : '例如：FIRE 2030'}
+                        placeholder={isAllocation ? '例如：平衡型配置' : '例如：FIRE 2030'}
+                        className="-mt-2"
                     />
+
+                    {!isAllocation && (
+                        <div className="space-y-1.5 mt-4">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">目標金額（TWD）</p>
+                            <MoneyInput
+                                className="tabular-nums"
+                                value={targetAmount}
+                                onChange={(e) => setTargetAmount(e.target.value)}
+                                required
+                                placeholder="例如：30,000,000"
+                            />
+                        </div>
+                    )}
                 </div>
 
-                {/* NET_WORTH: target amount */}
-                {!isAllocation && (
-                    <div className="space-y-2">
-                        <Label>目標金額 (TWD)</Label>
-                        <MoneyInput
-                            className="font-mono"
-                            value={targetAmount}
-                            onChange={(e) => setTargetAmount(e.target.value)}
-                            required
-                            placeholder="例如：30000000"
-                        />
-                    </div>
-                )}
-
-                {/* ASSET_ALLOCATION: multi-category editor */}
+                {/* ── 配置編輯器 ─────────────────────────── */}
                 {isAllocation && (
-                    <div className="space-y-3">
+                    <div className="border-t border-border/20 py-5 space-y-3">
                         <div className="flex items-center justify-between">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                資產配置目標
-                            </Label>
-                            {/* Total badge */}
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">目標配置</p>
                             <span className={cn(
-                                'text-xs font-semibold tabular-nums',
-                                Math.abs(total - 100) <= 0.01 ? 'text-emerald-600' : 'text-red-500'
+                                'font-display text-sm font-medium tabular-nums',
+                                Math.abs(total - 100) <= 0.01 ? 'text-trend-up' : 'text-destructive'
                             )}>
-                                {total.toFixed(0)}% / 100%
+                                {total.toFixed(0)}%
                             </span>
                         </div>
 
-                        {/* Rows */}
                         <div className="space-y-2">
                             {Object.entries(allocation).map(([cat, pct]) => (
                                 <div key={cat} className="flex items-center gap-3">
-                                    <span className="w-24 text-sm font-medium shrink-0">{(CATEGORY_ZH)[cat] ?? cat}</span>
+                                    <span className="w-20 text-sm text-muted-foreground shrink-0">{CATEGORY_ZH[cat] ?? cat}</span>
                                     <div className="relative flex-1">
                                         <Input
-                                            type="number"
-                                            min="0"
-                                            max="100"
-                                            step="1"
+                                            type="number" min="0" max="100" step="1"
                                             value={pct}
                                             onChange={(e) => setPercent(cat, Number(e.target.value))}
-                                            className="font-mono text-right pr-7 h-9 w-full"
+                                            className="tabular-nums text-right pr-7 h-9 w-full"
                                         />
-                                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">%</span>
+                                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 text-sm pointer-events-none">%</span>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => removeCategory(cat)}
-                                        className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
                                         disabled={Object.keys(allocation).length <= 1}
+                                        className="shrink-0 text-muted-foreground/40 hover:text-destructive transition-colors disabled:opacity-20"
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />
                                     </button>
@@ -225,47 +218,36 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
                             ))}
                         </div>
 
-                        {/* Add category */}
                         {availableToAdd.length > 0 && (
-                            <div className="flex gap-2 flex-wrap pt-1">
+                            <div className="flex gap-1.5 flex-wrap pt-1">
                                 {availableToAdd.map(cat => (
-                                    <button
-                                        key={cat}
-                                        type="button"
-                                        onClick={() => addCategory(cat)}
-                                        className="text-xs px-2.5 py-1 rounded-full border border-dashed border-border hover:border-primary hover:text-primary transition-colors"
-                                    >
-                                        + {(CATEGORY_ZH)[cat] ?? cat}
+                                    <button key={cat} type="button" onClick={() => addCategory(cat)}
+                                        className="text-[11px] px-2.5 py-1 rounded-lg border border-dashed border-border/60 text-muted-foreground hover:border-primary hover:text-foreground transition-colors">
+                                        + {CATEGORY_ZH[cat] ?? cat}
                                     </button>
                                 ))}
                             </div>
                         )}
 
-                        {/* Remaining hint */}
                         {Math.abs(total - 100) > 0.01 && (
-                            <p className="text-xs text-red-500">
-                                {remaining > 0 ? `${remaining.toFixed(0)}% 尚未分配` : '總分超過 100%，請調整數字。'}
+                            <p className="text-[11px] text-destructive">
+                                {remaining > 0 ? `還差 ${remaining.toFixed(0)}% 未分配` : '總計超過 100%，請調整。'}
                             </p>
                         )}
-                        <p className="text-xs text-muted-foreground">設定此類別應佔您總投資組合的目標比例。</p>
                     </div>
                 )}
 
-                {/* Bottom buttons */}
-                <div className="flex items-center justify-between pt-2">
+                {/* ── 操作按鈕 ───────────────────────────── */}
+                <div className="border-t border-border/20 pt-4 flex items-center justify-between">
                     {initialGoal ? (
-                        <button
-                            type="button"
-                            onClick={handleDelete}
-                            disabled={deleting}
-                            className="flex items-center gap-1.5 text-sm text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                            {deleting ? '刪除中...' : '刪除目標'}
+                        <button type="button" onClick={handleDelete} disabled={deleting}
+                            className="flex items-center gap-1.5 text-sm text-destructive/70 hover:text-destructive transition-colors disabled:opacity-50">
+                            <Trash2 className="w-3.5 h-3.5" />
+                            {deleting ? '刪除中…' : '刪除'}
                         </button>
                     ) : <span />}
                     <Button type="submit" disabled={loading || !isValid}>
-                        {loading ? '儲存中...' : (initialGoal ? '更新目標' : '設定目標')}
+                        {loading ? '儲存中…' : (initialGoal ? '更新目標' : '設定目標')}
                     </Button>
                 </div>
             </form>

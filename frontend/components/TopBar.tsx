@@ -1,14 +1,30 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Eye, EyeOff, Settings, ArrowLeft } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Eye, EyeOff, Settings, ArrowLeft, RefreshCw } from 'lucide-react';
 import { usePrivacy } from '@/components/PrivacyProvider';
+import { useState } from 'react';
+import { API_URL } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 export function TopBar() {
     const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
     const pathname = usePathname();
+    const router = useRouter();
     const isHome = pathname === '/';
+    const [refreshing, setRefreshing] = useState(false);
+
+    const handleRefresh = async () => {
+        if (refreshing) return;
+        setRefreshing(true);
+        try {
+            await fetch(`${API_URL}/system/refresh`, { method: 'POST' });
+            router.refresh();
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     return (
         <header className="sticky top-0 z-40 h-14 border-b border-border/60 bg-background/90 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
@@ -26,6 +42,16 @@ export function TopBar() {
                     </Link>
                 )}
                 <div className="flex items-center gap-1">
+                    {isHome && (
+                        <button
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                            aria-label="重整報價"
+                        >
+                            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+                        </button>
+                    )}
                     <button
                         onClick={togglePrivacyMode}
                         className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"

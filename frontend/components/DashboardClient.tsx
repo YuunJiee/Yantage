@@ -4,14 +4,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { usePrivacy } from '@/components/PrivacyProvider';
 import { useSetting } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
-import { TrendingUp, TrendingDown, Plus, ArrowRightLeft, Target, Link as LinkIcon } from 'lucide-react';
+import { TrendingUp, TrendingDown, Plus, Target, Link as LinkIcon } from 'lucide-react';
 import { CATEGORY_COLORS, CATEGORY_ZH, DASHBOARD_CATEGORY_ORDER } from '@/lib/constants';
 import type { Goal, DashboardData } from '@/lib/types';
 
 import { AssetAccordion } from './AssetAccordion';
 import { AssetAllocationWidget } from './AssetAllocationWidget';
 import { NetWorthTrendChart } from './NetWorthTrendChart';
-import { RiskMetricsWidget } from './RiskMetricsWidget';
 import { TopPerformersWidget } from './TopPerformersWidget';
 import { GoalWidget } from './GoalWidget';
 import { AddAssetDialog } from './AddAssetDialog';
@@ -30,7 +29,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [addDefaultCategory, setAddDefaultCategory] = useState<string | undefined>(undefined);
     const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
-    const [isTransferOpen, setIsTransferOpen] = useState(false);
+    const [assetView, setAssetView] = useState<'list' | 'chart'>('list');
     const [isIntegrationOpen, setIsIntegrationOpen] = useState(false);
     const [goalsRefreshTrigger, setGoalsRefreshTrigger] = useState(0);
     const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
@@ -128,14 +127,8 @@ export function DashboardClient({ data }: DashboardClientProps) {
             {/* ─── Charts divider ─────────────────────────────── */}
             <div className="border-t border-border/20" />
 
-            {/* ── Asset Allocation Pie ───────────────────────── */}
-            <AssetAllocationWidget assets={assets} />
-
             {/* ── Net Worth Trend ────────────────────────────── */}
             <NetWorthTrendChart />
-
-            {/* ── Risk Metrics ───────────────────────────────── */}
-            <RiskMetricsWidget />
 
             {/* ─── Assets divider ─────────────────────────────── */}
             <div className="border-t border-border/20" />
@@ -145,36 +138,61 @@ export function DashboardClient({ data }: DashboardClientProps) {
 
             {/* ── Asset Accordions ───────────────────────────── */}
             <section>
-                <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground px-1 mb-3">
-                    資產明細
-                </h2>
-                <div className="rounded-2xl border border-border bg-card px-4 divide-y divide-border/50">
-                    {visibleOrder.map(category => {
-                        const catTotal = getCategoryTotal(category);
-                        const percentage = totalPositiveAssets > 0
-                            ? Math.round((catTotal / totalPositiveAssets) * 100)
-                            : 0;
-                        return (
-                            <AssetAccordion
-                                key={category}
-                                category={category}
-                                title={CATEGORY_ZH[category] ?? category}
-                                totalAmount={catTotal}
-                                assets={assets}
-                                color={CATEGORY_COLORS[category] || 'bg-gray-500'}
-                                onAddClick={category === 'Crypto' ? undefined : () => {
-                                    setAddDefaultCategory(category);
-                                    setIsAddOpen(true);
-                                }}
-                                onTitleClick={undefined}
-                                onActionClick={category === 'Crypto' ? () => setIsIntegrationOpen(true) : undefined}
-                                actionIcon={<LinkIcon className="w-5 h-5" />}
-                                isEditMode={false}
-                                percentage={percentage}
-                            />
-                        );
-                    })}
+                <div className="flex items-center justify-between px-1 mb-3">
+                    <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+                        資產明細
+                    </h2>
+                    <div className="flex gap-1 rounded-lg border border-border/60 bg-muted/40 p-0.5">
+                        {(['list', 'chart'] as const).map(v => (
+                            <button
+                                key={v}
+                                onClick={() => setAssetView(v)}
+                                className={cn(
+                                    'rounded-md px-2.5 py-1 text-[11px] font-medium transition-all duration-200',
+                                    assetView === v
+                                        ? 'bg-background text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                )}
+                            >
+                                {v === 'list' ? '明細' : '配置'}
+                            </button>
+                        ))}
+                    </div>
                 </div>
+
+                {assetView === 'chart' ? (
+                    <div className="rounded-2xl border border-border bg-card px-4 py-4">
+                        <AssetAllocationWidget assets={assets} />
+                    </div>
+                ) : (
+                    <div className="rounded-2xl border border-border bg-card px-4 divide-y divide-border/50">
+                        {visibleOrder.map(category => {
+                            const catTotal = getCategoryTotal(category);
+                            const percentage = totalPositiveAssets > 0
+                                ? Math.round((catTotal / totalPositiveAssets) * 100)
+                                : 0;
+                            return (
+                                <AssetAccordion
+                                    key={category}
+                                    category={category}
+                                    title={CATEGORY_ZH[category] ?? category}
+                                    totalAmount={catTotal}
+                                    assets={assets}
+                                    color={CATEGORY_COLORS[category] || 'bg-gray-500'}
+                                    onAddClick={category === 'Crypto' ? undefined : () => {
+                                        setAddDefaultCategory(category);
+                                        setIsAddOpen(true);
+                                    }}
+                                    onTitleClick={undefined}
+                                    onActionClick={category === 'Crypto' ? () => setIsIntegrationOpen(true) : undefined}
+                                    actionIcon={<LinkIcon className="w-5 h-5" />}
+                                    isEditMode={false}
+                                    percentage={percentage}
+                                />
+                            );
+                        })}
+                    </div>
+                )}
             </section>
 
             {/* ── Bottom Action Bar ──────────────────────────── */}
@@ -185,13 +203,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
                 >
                     <Plus className="w-4 h-4" /> 新增資產
                 </button>
-                <button
-                    onClick={() => setIsTransferOpen(true)}
-                    className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-transparent px-4 py-3 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-muted/60 active:scale-[0.98] transition-all duration-150"
-                >
-                    <ArrowRightLeft className="w-4 h-4" />
-                </button>
-                <button
+<button
                     onClick={() => setIsGoalDialogOpen(true)}
                     className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-transparent px-4 py-3 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-muted/60 active:scale-[0.98] transition-all duration-150"
                 >
@@ -214,14 +226,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
                 }}
                 initialGoal={editingGoal}
             />
-            <AssetActionDialog
-                isOpen={isTransferOpen}
-                onClose={() => setIsTransferOpen(false)}
-                asset={null}
-                allAssets={assets}
-                initialMode="transfer"
-            />
-            <IntegrationDialog
+<IntegrationDialog
                 isOpen={isIntegrationOpen}
                 onClose={() => setIsIntegrationOpen(false)}
             />

@@ -1,12 +1,11 @@
-
 {
-  "name": "Yantage Finance",
+  "name": "Yantage",
   "short_name": "Yantage",
-  "description": "Advanced Asset Intelligence Dashboard",
+  "description": "個人資產儀表板",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#f5f5f0",
+  "theme_color": "#f5f5f0",
   "icons": [
     {
       "src": "/icon.png",

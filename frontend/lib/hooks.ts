@@ -19,10 +19,9 @@ import {
     fetchBudgetCategories,
     fetchIncomeItems,
     fetchSetting,
-    fetchRiskMetrics,
     API_URL,
 } from './api';
-import type { DashboardData, BudgetCategory, IncomeItem, RiskMetricsResponse } from './types';
+import type { DashboardData, BudgetCategory, IncomeItem } from './types';
 
 // ── Shared history data point type ───────────────────────────────────────────
 export interface HistoryPoint {
@@ -38,7 +37,6 @@ export const SWR_KEYS = {
     budgets:      `${API_URL}/budgets/categories`,
     income:       `${API_URL}/income/items`,
     setting:      (key: string) => `${API_URL}/settings/${key}`,
-    riskMetrics:  `${API_URL}/stats/risk_metrics`,
 } as const;
 
 // ── Convenience re-validators (call after mutations) ─────────────────────────
@@ -136,23 +134,6 @@ export function useSetting(key: string) {
         isLoading,
         isError: !!error,
         refresh: mutate,
-    };
-}
-
-/**
- * Risk metrics (CAGR, max drawdown, volatility).
- * Heavy calculation on the backend → cache for 10 minutes.
- */
-export function useRiskMetrics() {
-    const { data, error, isLoading } = useSWR<RiskMetricsResponse>(
-        SWR_KEYS.riskMetrics,
-        fetchRiskMetrics,
-        { dedupingInterval: 10 * 60 * 1000 },
-    );
-    return {
-        metrics: data,
-        isLoading,
-        isError: !!error,
     };
 }
 

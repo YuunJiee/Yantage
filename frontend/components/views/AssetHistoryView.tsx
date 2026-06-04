@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils';
 import { TrendingUp, TrendingDown, ArrowRightLeft, Pencil, Wallet } from 'lucide-react';
-import { AssetHistoryChart } from '../AssetHistoryChart';
 import type { Asset } from '@/lib/types';
 
 interface AssetHistoryDialogProps {
@@ -9,10 +8,9 @@ interface AssetHistoryDialogProps {
     asset: Asset | null;
     onEdit?: () => void;
     onAdjustBalance?: () => void;
-    onTransfer?: () => void;
 }
 
-export function AssetHistoryView({ asset, onEdit, onAdjustBalance, onTransfer }: Omit<AssetHistoryDialogProps, 'isOpen' | 'onClose'>) {
+export function AssetHistoryView({ asset, onEdit, onAdjustBalance }: Omit<AssetHistoryDialogProps, 'isOpen' | 'onClose'>) {
     if (!asset) return null;
 
     const sortedTransactions = [...(asset.transactions || [])].sort(
@@ -45,27 +43,20 @@ export function AssetHistoryView({ asset, onEdit, onAdjustBalance, onTransfer }:
                     <span />
                 )}
                 {!isManaged && (
-                    <div className="flex gap-1 ml-auto">
+                    <div className="flex gap-1.5 ml-auto">
                         <button
                             onClick={onAdjustBalance}
-                            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                            title="調整餘額"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                         >
-                            <Wallet className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={onTransfer}
-                            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                            title="資產轉移"
-                        >
-                            <ArrowRightLeft className="w-4 h-4" />
+                            <Wallet className="w-3.5 h-3.5" />
+                            調整
                         </button>
                         <button
                             onClick={onEdit}
-                            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                            title="編輯"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                         >
-                            <Pencil className="w-4 h-4" />
+                            <Pencil className="w-3.5 h-3.5" />
+                            編輯
                         </button>
                     </div>
                 )}
@@ -75,7 +66,7 @@ export function AssetHistoryView({ asset, onEdit, onAdjustBalance, onTransfer }:
             <div className="grid grid-cols-2 divide-x divide-border/50 pb-4 border-b border-border/50">
                 <div className="pr-4">
                     <div className="text-xs text-muted-foreground mb-1">目前持倉</div>
-                    <div className="text-xl font-bold tabular-nums">
+                    <div className="font-display text-xl font-medium tabular-nums">
                         {totalQuantity.toLocaleString(undefined, {
                             minimumFractionDigits: isCrypto ? 8 : 0,
                             maximumFractionDigits: isCrypto ? 8 : 2
@@ -84,7 +75,7 @@ export function AssetHistoryView({ asset, onEdit, onAdjustBalance, onTransfer }:
                 </div>
                 <div className="pl-4">
                     <div className="text-xs text-muted-foreground mb-1">市值 (TWD)</div>
-                    <div className="text-xl font-bold tabular-nums">
+                    <div className="font-display text-xl font-medium tabular-nums">
                         ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </div>
                 </div>
@@ -94,12 +85,6 @@ export function AssetHistoryView({ asset, onEdit, onAdjustBalance, onTransfer }:
                         <span className="text-xs font-medium tabular-nums">{asset.ticker}</span>
                     </div>
                 )}
-            </div>
-
-            {/* Chart */}
-            <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">歷史走勢</h3>
-                <AssetHistoryChart assetId={asset.id} color={isCrypto ? "#f59e0b" : "#10b981"} />
             </div>
 
             {/* Transaction list */}
