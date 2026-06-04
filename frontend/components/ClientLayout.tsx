@@ -3,7 +3,6 @@
 import { SWRConfig } from 'swr';
 import { PrivacyProvider } from '@/components/PrivacyProvider';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { GlobalThemeProvider } from '@/components/GlobalThemeProvider';
 import { TopBar } from '@/components/TopBar';
 import { ToastProvider } from '@/components/ui/toast';
 
@@ -20,7 +19,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                 forcedTheme="light"
                 disableTransitionOnChange
             >
-                <GlobalThemeProvider>
                     <PrivacyProvider>
                         <ToastProvider>
                             <div className="min-h-screen bg-background text-foreground">
@@ -31,7 +29,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                             </div>
                         </ToastProvider>
                     </PrivacyProvider>
-                </GlobalThemeProvider>
             </ThemeProvider>
         </SWRConfig>
     );

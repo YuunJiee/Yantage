@@ -18,7 +18,10 @@
       "Read(//tmp/**)",
       "Bash(cat /home/yuunjee/package.json 2>/dev/null | head -20; echo \"---\"; ls /home/yuunjee/package*.json 2>/dev/null)",
       "Read(//home/yuunjee/**)",
-      "mcp__plugin_playwright_playwright__browser_click"
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "Bash(git add *)",
+      "Bash(git commit -m 'fix: correct budget API URLs to /budgets/categories *)"
     ]
   }
 }

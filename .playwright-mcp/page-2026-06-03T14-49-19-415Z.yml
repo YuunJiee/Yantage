@@ -1,0 +1,32 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "返回首頁" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img [ref=e6]
+          - text: 返回
+        - button "隱藏數字" [ref=e9]:
+          - img [ref=e10]
+    - main [ref=e13]:
+      - generic [ref=e14]:
+        - img [ref=e16]
+        - generic [ref=e18]:
+          - paragraph [ref=e19]: 無法載入資料
+          - paragraph [ref=e20]: 請確認網路連線並重試。
+        - button "重試" [ref=e21]
+  - generic "Notifications"
+  - generic [ref=e26] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e27]:
+      - img [ref=e28]
+    - generic [ref=e31]:
+      - button "Open issues overlay" [ref=e32]:
+        - generic [ref=e33]:
+          - generic [ref=e34]: "1"
+          - generic [ref=e35]: "2"
+        - generic [ref=e36]:
+          - text: Issue
+          - generic [ref=e37]: s
+      - button "Collapse issues badge" [ref=e38]:
+        - img [ref=e39]
+  - alert [ref=e41]
