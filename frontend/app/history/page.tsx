@@ -8,6 +8,7 @@ import { useDashboard } from "@/lib/hooks";
 import type { Asset, Transaction } from "@/lib/types";
 import { TransactionEditDialog } from "@/components/TransactionEditDialog";
 import { PageError } from "@/components/ui/skeleton";
+import { CATEGORY_ZH, CHART_RANGES } from '@/lib/constants';
 
 interface EnrichedTransaction extends Transaction {
     assetName: string;
@@ -16,19 +17,6 @@ interface EnrichedTransaction extends Transaction {
     assetSource?: string;
     valueTwd?: number;
 }
-
-const CATEGORY_LABELS: Record<string, string> = {
-    Fluid: '流動資產', Investment: '投資', Stock: '股票', Crypto: '加密貨幣',
-    Fixed: '固定資產', Receivables: '應收帳款', Liabilities: '負債',
-};
-
-const RANGES = [
-    { key: '30d', label: '30天' },
-    { key: '3mo', label: '3個月' },
-    { key: '6mo', label: '6個月' },
-    { key: '1y', label: '1年' },
-    { key: 'all', label: '全部' },
-] as const;
 
 export default function HistoryPage() {
     const [range, setRange] = useState<string>('all');
@@ -79,16 +67,18 @@ export default function HistoryPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">歷史紀錄</p>
-                    <h1 className="text-2xl font-bold tracking-tight">所有交易</h1>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-2">歷史紀錄</p>
+                    <h1 className="font-display text-2xl font-medium tracking-tight">所有交易</h1>
                 </div>
                 <div className="flex gap-3">
-                    {RANGES.map(({ key, label }) => (
+                    {CHART_RANGES.map(({ key, label }) => (
                         <button
                             key={key}
                             onClick={() => setRange(key)}
-                            className={cn('text-xs font-medium transition-colors',
-                                range === key ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+                            className={cn('text-xs font-medium transition-all duration-200 pb-px',
+                                range === key
+                                    ? 'text-foreground border-b border-foreground/50'
+                                    : 'text-muted-foreground hover:text-foreground'
                             )}
                         >
                             {label}
@@ -113,7 +103,7 @@ export default function HistoryPage() {
                                     <div>
                                         <div className="text-sm font-medium text-foreground">{txn.assetName}</div>
                                         <div className="text-[11px] text-muted-foreground mt-0.5">
-                                            {new Date(txn.date).toLocaleDateString('zh-TW')} · {CATEGORY_LABELS[txn.category] ?? txn.category}
+                                            {new Date(txn.date).toLocaleDateString('zh-TW')} · {CATEGORY_ZH[txn.category] ?? txn.category}
                                         </div>
                                     </div>
                                     <div className="text-right">
@@ -155,7 +145,7 @@ export default function HistoryPage() {
                                         <td className="px-4 py-3">
                                             <div className="text-sm font-medium text-foreground">{txn.assetName}</div>
                                             <div className="text-[11px] text-muted-foreground">
-                                                {CATEGORY_LABELS[txn.category] ?? txn.category}
+                                                {CATEGORY_ZH[txn.category] ?? txn.category}
                                                 {txn.assetTicker ? ` · ${txn.assetTicker}` : ''}
                                             </div>
                                         </td>

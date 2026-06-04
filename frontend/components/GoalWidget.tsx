@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { usePrivacy } from "@/components/PrivacyProvider";
 import { fetchGoals, fetchForecast } from '@/lib/api';
 import type { Goal, GoalForecast, DashboardData, Asset } from '@/lib/types';
+import { CATEGORY_ZH } from '@/lib/constants';
 
 function parseAllocation(data?: string | null): Record<string, number> | null {
     if (!data) return null;
@@ -15,10 +16,6 @@ function parseAllocation(data?: string | null): Record<string, number> | null {
     return null;
 }
 
-const CAT_ZH: Record<string, string> = {
-    Fluid: '流動資產', Investment: '投資', Stock: '股票',
-    Crypto: '加密貨幣', Fixed: '固定資產', Receivables: '應收帳款', Liabilities: '負債',
-};
 
 export function GoalWidget({ dashboardData, refreshTrigger, onEditGoal }: {
     dashboardData: DashboardData | null | undefined;
@@ -67,15 +64,15 @@ export function GoalWidget({ dashboardData, refreshTrigger, onEditGoal }: {
                             className="cursor-pointer group"
                         >
                             <div className="flex items-baseline justify-between mb-2">
-                                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{goal.name}</span>
-                                <span className="text-xs text-muted-foreground tabular-nums">
+                                <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{goal.name}</span>
+                                <span className="text-[11px] text-muted-foreground/70 tabular-nums">
                                     {fmt(netWorth)} / {fmt(goal.target_amount)}
                                 </span>
                             </div>
                             <div className="flex items-end gap-2 mb-2">
-                                <span className="text-2xl font-bold tracking-tight tabular-nums">{progress.toFixed(1)}%</span>
+                                <span className="font-display text-[1.6rem] font-medium tracking-tight tabular-nums leading-none">{progress.toFixed(1)}%</span>
                                 {forecast && (
-                                    <span className="text-xs text-muted-foreground mb-0.5">預計 {forecast.predicted_date}</span>
+                                    <span className="text-[11px] text-muted-foreground/70 mb-0.5">預計 {forecast.predicted_date}</span>
                                 )}
                             </div>
                             <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
@@ -113,7 +110,7 @@ export function GoalWidget({ dashboardData, refreshTrigger, onEditGoal }: {
                                     return (
                                         <div key={cat}>
                                             <div className="flex justify-between text-xs mb-1">
-                                                <span className="text-muted-foreground">{CAT_ZH[cat] ?? cat}</span>
+                                                <span className="text-muted-foreground">{CATEGORY_ZH[cat] ?? cat}</span>
                                                 <span className="tabular-nums text-muted-foreground/70">
                                                     {isPrivacyMode ? '••%' : `${currentPct.toFixed(1)}%`}
                                                     <span className="opacity-50"> / {targetPct}%</span>

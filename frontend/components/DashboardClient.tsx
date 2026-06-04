@@ -5,7 +5,7 @@ import { usePrivacy } from '@/components/PrivacyProvider';
 import { useSetting } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 import { TrendingUp, TrendingDown, Plus, ArrowRightLeft, Target, Link as LinkIcon } from 'lucide-react';
-import { CATEGORY_COLORS } from '@/lib/constants';
+import { CATEGORY_COLORS, CATEGORY_ZH, DASHBOARD_CATEGORY_ORDER } from '@/lib/constants';
 import type { Goal, DashboardData } from '@/lib/types';
 
 import { AssetAccordion } from './AssetAccordion';
@@ -19,11 +19,6 @@ import { GoalDialog } from './GoalDialog';
 import { AssetActionDialog } from './AssetActionDialog';
 import { IntegrationDialog } from './IntegrationDialog';
 
-const CATEGORY_ORDER = ['Fluid', 'Stock', 'Crypto', 'Fixed', 'Receivables', 'Liabilities'] as const;
-const CATEGORY_LABELS: Record<string, string> = {
-    Fluid: '流動資產', Investment: '投資', Stock: '股票',
-    Crypto: '加密貨幣', Fixed: '固定資產', Receivables: '應收帳款', Liabilities: '負債',
-};
 
 interface DashboardClientProps {
     data: DashboardData;
@@ -50,7 +45,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
                 try { setVisibleCategories(JSON.parse(cached)); } catch { /* ignore */ }
             } else {
                 const defaults: Record<string, boolean> = {};
-                CATEGORY_ORDER.forEach(c => defaults[c] = true);
+                DASHBOARD_CATEGORY_ORDER.forEach(c => defaults[c] = true);
                 setVisibleCategories(defaults);
             }
             return;
@@ -86,30 +81,30 @@ export function DashboardClient({ data }: DashboardClientProps) {
     const totalPositiveAssets = ['Fluid', 'Stock', 'Crypto', 'Receivables']
         .reduce((sum, cat) => sum + getCategoryTotal(cat), 0);
 
-    const visibleOrder = CATEGORY_ORDER.filter(cat => visibleCategories[cat] !== false);
+    const visibleOrder = DASHBOARD_CATEGORY_ORDER.filter(cat => visibleCategories[cat] !== false);
 
     return (
         <div className="mx-auto max-w-2xl px-4 py-8 space-y-8">
 
             {/* ── Net Worth Hero ─────────────────────────────── */}
             <section>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">淨值</p>
-                <p className="text-4xl font-bold tracking-tight">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">淨資產</p>
+                <p className="font-display text-[3.25rem] font-medium tracking-tight leading-none">
                     {isPrivacyMode ? '••••••' : `$${new Intl.NumberFormat('en-US').format(data.net_worth)}`}
                 </p>
                 <div className={cn(
-                    'flex items-center gap-1.5 mt-1.5 text-sm font-medium',
+                    'flex items-center gap-1.5 mt-3 text-sm font-medium',
                     data.total_pl >= 0 ? 'text-trend-up' : 'text-trend-down'
                 )}>
                     {data.total_pl >= 0
-                        ? <TrendingUp className="w-4 h-4" />
-                        : <TrendingDown className="w-4 h-4" />}
+                        ? <TrendingUp className="w-3.5 h-3.5" />
+                        : <TrendingDown className="w-3.5 h-3.5" />}
                     {isPrivacyMode ? '••••' : `${data.total_pl >= 0 ? '+' : ''}$${new Intl.NumberFormat('en-US').format(Math.abs(data.total_pl))}`}
                     <span className="text-muted-foreground font-normal">
                         ({data.total_roi.toFixed(1)}%)
                     </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">最後更新：{formattedTime}</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-2 tracking-wide">更新於 {formattedTime}</p>
             </section>
 
             {/* ── Stale Warning ──────────────────────────────── */}
@@ -130,6 +125,9 @@ export function DashboardClient({ data }: DashboardClientProps) {
                 }}
             />
 
+            {/* ─── Charts divider ─────────────────────────────── */}
+            <div className="border-t border-border/20" />
+
             {/* ── Asset Allocation Pie ───────────────────────── */}
             <AssetAllocationWidget assets={assets} />
 
@@ -139,12 +137,15 @@ export function DashboardClient({ data }: DashboardClientProps) {
             {/* ── Risk Metrics ───────────────────────────────── */}
             <RiskMetricsWidget />
 
+            {/* ─── Assets divider ─────────────────────────────── */}
+            <div className="border-t border-border/20" />
+
             {/* ── Top / Bottom Performers ────────────────────── */}
             <TopPerformersWidget assets={assets} />
 
             {/* ── Asset Accordions ───────────────────────────── */}
             <section>
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-3">
+                <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground px-1 mb-3">
                     資產明細
                 </h2>
                 <div className="rounded-2xl border border-border bg-card px-4 divide-y divide-border/50">
@@ -157,7 +158,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
                             <AssetAccordion
                                 key={category}
                                 category={category}
-                                title={CATEGORY_LABELS[category] ?? category}
+                                title={CATEGORY_ZH[category] ?? category}
                                 totalAmount={catTotal}
                                 assets={assets}
                                 color={CATEGORY_COLORS[category] || 'bg-gray-500'}
@@ -177,24 +178,24 @@ export function DashboardClient({ data }: DashboardClientProps) {
             </section>
 
             {/* ── Bottom Action Bar ──────────────────────────── */}
-            <div className="flex gap-3 pt-2 pb-8">
+            <div className="flex gap-2.5 pt-2 pb-8">
                 <button
                     onClick={() => setIsAddOpen(true)}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-foreground text-background py-3 text-sm font-medium hover:opacity-90 transition-opacity"
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-foreground text-background py-3 text-sm font-medium hover:opacity-85 active:scale-[0.98] transition-all duration-150"
                 >
                     <Plus className="w-4 h-4" /> 新增資產
                 </button>
                 <button
                     onClick={() => setIsTransferOpen(true)}
-                    className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium hover:bg-muted transition-colors"
+                    className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-transparent px-4 py-3 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-muted/60 active:scale-[0.98] transition-all duration-150"
                 >
-                    <ArrowRightLeft className="w-4 h-4" /> 轉移
+                    <ArrowRightLeft className="w-4 h-4" />
                 </button>
                 <button
                     onClick={() => setIsGoalDialogOpen(true)}
-                    className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium hover:bg-muted transition-colors"
+                    className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-transparent px-4 py-3 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-muted/60 active:scale-[0.98] transition-all duration-150"
                 >
-                    <Target className="w-4 h-4" /> 目標
+                    <Target className="w-4 h-4" />
                 </button>
             </div>
 

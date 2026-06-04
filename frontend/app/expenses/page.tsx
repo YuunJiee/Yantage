@@ -109,34 +109,34 @@ export default function BudgetPage() {
 
             {/* Header */}
             <div className="mb-8">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">財務規劃</p>
-                <h1 className="text-2xl font-bold tracking-tight">預算規劃</h1>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-2">財務規劃</p>
+                <h1 className="font-display text-2xl font-medium tracking-tight">預算規劃</h1>
             </div>
 
             {/* ── 差額概覽 ─────────────────────────────── */}
             <section className="mb-8">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">本月差額</h2>
+                <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-4">本月差額</h2>
 
                 {/* Main diff row */}
                 <div className="grid grid-cols-3 divide-x divide-border/50 mb-6">
                     <div className="pr-6">
-                        <div className="text-xs text-muted-foreground mb-1">總收入</div>
-                        <div className="text-2xl font-bold tabular-nums">
+                        <div className="text-[11px] text-muted-foreground mb-1.5">總收入</div>
+                        <div className="font-display text-2xl font-medium tabular-nums leading-none">
                             {isPrivacyMode ? '••••' : `$${totalIncome.toLocaleString()}`}
                         </div>
                     </div>
                     <div className="px-6">
-                        <div className="text-xs text-muted-foreground mb-1">總預算</div>
-                        <div className="text-2xl font-bold tabular-nums">
+                        <div className="text-[11px] text-muted-foreground mb-1.5">總預算</div>
+                        <div className="font-display text-2xl font-medium tabular-nums leading-none">
                             {isPrivacyMode ? '••••' : `$${totalBudget.toLocaleString()}`}
                         </div>
                     </div>
                     <div className="pl-6">
-                        <div className={cn('flex items-center gap-1.5 text-xs font-medium mb-1', deficitStatus.color)}>
+                        <div className={cn('flex items-center gap-1.5 text-[11px] font-medium mb-1.5', deficitStatus.color)}>
                             <DeficitIcon className="w-3.5 h-3.5" />
                             {deficitStatus.label}
                         </div>
-                        <div className={cn('text-2xl font-bold tabular-nums', deficitStatus.color)}>
+                        <div className={cn('font-display text-2xl font-medium tabular-nums leading-none', deficitStatus.color)}>
                             {isPrivacyMode ? '••••' : `$${Math.abs(deficit).toLocaleString()}`}
                         </div>
                     </div>
@@ -160,7 +160,7 @@ export default function BudgetPage() {
                     <div className="rounded-2xl border border-border bg-card px-4 py-3">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-xs text-muted-foreground">投資佔比</span>
-                            <span className={cn('text-sm font-semibold tabular-nums', investmentRatio > 30 ? 'text-emerald-600' : 'text-foreground')}>
+                            <span className={cn('text-sm font-semibold tabular-nums', investmentRatio >= 20 ? 'text-emerald-600' : 'text-foreground')}>
                                 {investmentRatio.toFixed(1)}%
                             </span>
                         </div>
@@ -179,7 +179,7 @@ export default function BudgetPage() {
                 {/* ── 收入 ─────────────────────────────────── */}
                 <div className="xl:col-span-1">
                     <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">每月預期收入</h2>
+                        <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">每月預期收入</h2>
                         <button onClick={() => { setEditingIncomeItem(null); setIsIncomeDialogOpen(true); }} className="p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
                             <Plus className="w-3.5 h-3.5" />
                         </button>
@@ -208,7 +208,7 @@ export default function BudgetPage() {
                 {/* ── 預算類別 ──────────────────────────────── */}
                 <div className="xl:col-span-2">
                     <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">預算類別</h2>
+                        <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">預算類別</h2>
                         <button onClick={openAddBudget} className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
                             <Plus className="w-3.5 h-3.5" /> 新增類別
                         </button>
@@ -230,7 +230,7 @@ export default function BudgetPage() {
                                 return (
                                     <div key={group}>
                                         <div className="flex items-center justify-between mb-3">
-                                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{GROUP_ZH[group]}</h3>
+                                            <h3 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{GROUP_ZH[group]}</h3>
                                             <span className="text-xs text-muted-foreground tabular-nums">
                                                 {isPrivacyMode ? '••••' : `$${groupTotal.toLocaleString()}`}
                                                 <span className="opacity-50 ml-1">({groupPct.toFixed(0)}%)</span>
@@ -257,7 +257,7 @@ export default function BudgetPage() {
                                                                 {cat.note && <div className="text-[10px] text-muted-foreground truncate">{cat.note}</div>}
                                                             </div>
                                                         </div>
-                                                        <div className="text-lg font-bold tabular-nums mb-2">
+                                                        <div className="font-display text-lg font-medium tabular-nums mb-2 leading-none">
                                                             {isPrivacyMode ? '••••' : `$${cat.budget_amount.toLocaleString()}`}
                                                         </div>
                                                         <div className="h-1 w-full bg-muted rounded-full overflow-hidden">

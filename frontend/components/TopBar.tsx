@@ -11,10 +11,10 @@ export function TopBar() {
     const isHome = pathname === '/';
 
     return (
-        <header className="sticky top-0 z-40 h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="sticky top-0 z-40 h-14 border-b border-border/60 bg-background/90 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
             <div className="flex h-full items-center justify-between px-5">
                 {isHome ? (
-                    <span className="text-base font-semibold tracking-tight">Yantage</span>
+                    <span className="font-display italic text-[1.15rem] font-medium tracking-tight select-none">Yantage</span>
                 ) : (
                     <Link
                         href="/"

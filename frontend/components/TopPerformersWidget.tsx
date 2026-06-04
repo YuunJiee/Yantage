@@ -29,7 +29,7 @@ export function TopPerformersWidget({ assets }: TopPerformersWidgetProps) {
     return (
         <div>
             <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
                     表現排行
                 </h2>
                 <div className="flex gap-3">
@@ -69,10 +69,10 @@ export function TopPerformersWidget({ assets }: TopPerformersWidgetProps) {
                                     <div className="text-[11px] text-muted-foreground uppercase tracking-wide">{asset.ticker}</div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <div className={cn('text-sm font-semibold tabular-nums', isPositive ? 'text-emerald-600' : 'text-red-500')}>
+                                    <div className={cn('font-display text-[0.95rem] font-medium tabular-nums', isPositive ? 'text-trend-up' : 'text-trend-down')}>
                                         {isPrivacyMode ? '••••' : `${isPositive ? '+' : ''}$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(pl)}`}
                                     </div>
-                                    <div className={cn('text-[11px] font-medium tabular-nums', isPositive ? 'text-emerald-600/70' : 'text-red-400/70')}>
+                                    <div className={cn('text-[11px] font-medium tabular-nums', isPositive ? 'text-trend-up/70' : 'text-trend-down/70')}>
                                         {roi.toFixed(1)}%
                                     </div>
                                 </div>

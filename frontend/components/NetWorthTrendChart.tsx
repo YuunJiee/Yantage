@@ -5,14 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { cn } from "@/lib/utils";
 import { usePrivacy } from "@/components/PrivacyProvider";
 import { useNetWorthHistory } from '@/lib/hooks';
-
-const RANGES = [
-    { key: '30d', label: '30天' },
-    { key: '3mo', label: '3個月' },
-    { key: '6mo', label: '6個月' },
-    { key: '1y', label: '1年' },
-    { key: 'all', label: '全部' },
-] as const;
+import { CHART_RANGES } from '@/lib/constants';
 
 interface NetWorthTrendChartProps {
     className?: string;
@@ -32,17 +25,19 @@ export function NetWorthTrendChart({ className }: NetWorthTrendChartProps) {
     return (
         <div className={className}>
             <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
                     淨值趨勢
                 </h2>
                 <div className="flex gap-3">
-                    {RANGES.map(({ key, label }) => (
+                    {CHART_RANGES.map(({ key, label }) => (
                         <button
                             key={key}
                             onClick={() => setRange(key)}
                             className={cn(
-                                'text-xs font-medium transition-colors',
-                                range === key ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+                                'text-xs font-medium transition-all duration-200 pb-px',
+                                range === key
+                                    ? 'text-foreground border-b border-foreground/50'
+                                    : 'text-muted-foreground hover:text-foreground'
                             )}
                         >
                             {label}
@@ -64,11 +59,11 @@ export function NetWorthTrendChart({ className }: NetWorthTrendChartProps) {
                         <AreaChart data={data}>
                             <defs>
                                 <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#8ABF9E" stopOpacity={0.12} />
-                                    <stop offset="95%" stopColor="#8ABF9E" stopOpacity={0} />
+                                    <stop offset="0%" stopColor="#8ABF9E" stopOpacity={0.18} />
+                                    <stop offset="100%" stopColor="#8ABF9E" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
+                            <CartesianGrid vertical={false} strokeDasharray="2 4" stroke="var(--border)" strokeOpacity={0.6} />
                             <XAxis
                                 dataKey="date"
                                 tickLine={false}
@@ -90,7 +85,7 @@ export function NetWorthTrendChart({ className }: NetWorthTrendChartProps) {
                                 domain={['auto', 'auto']}
                             />
                             <Tooltip
-                                contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)', fontSize: '12px' }}
+                                contentStyle={{ borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '11px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}
                                 formatter={(value: number | undefined) =>
                                     isPrivacyMode ? '••••' : '$' + new Intl.NumberFormat('en-US').format(value ?? 0)
                                 }

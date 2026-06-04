@@ -60,9 +60,9 @@ export function RiskMetricsWidget() {
         <div className="grid grid-cols-3 divide-x divide-border/50">
             {items.map(({ label, value, status, color }) => (
                 <div key={label} className="px-4 first:pl-0 last:pr-0">
-                    <div className="text-2xl font-bold tracking-tight tabular-nums">{value}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
-                    <div className={cn('text-xs font-medium mt-1', color)}>{status}</div>
+                    <div className="font-display text-[1.6rem] font-medium tracking-tight tabular-nums leading-none">{value}</div>
+                    <div className="text-[11px] text-muted-foreground mt-1.5 tracking-wide">{label}</div>
+                    <div className={cn('text-[11px] font-medium mt-0.5', color)}>{status}</div>
                 </div>
             ))}
         </div>

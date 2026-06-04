@@ -5,6 +5,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recha
 import { usePrivacy } from "@/components/PrivacyProvider";
 import { cn } from "@/lib/utils";
 import type { Asset } from '@/lib/types';
+import { CATEGORY_ZH } from '@/lib/constants';
 
 const CHART_THEMES: Record<string, string[]> = {
     'Morandi': ['#A4C3B2', '#E0D5C3', '#D4A59A', '#8199A6', '#8ABF9E', '#C5AFA5'],
@@ -18,12 +19,6 @@ const SUBCATEGORY_ZH: Record<string, string> = {
     'Other Investment': '其他投資', 'Real Estate': '房地產', 'Car': '車輛',
     'Other Fixed Asset': '其他固定資產', 'Credit Card': '信用卡',
     'Loan': '貸款', 'Payable': '應付帳款', 'Other Liability': '其他負債',
-};
-
-const CATEGORY_ZH: Record<string, string> = {
-    'Fluid': '流動資產', 'Investment': '投資', 'Stock': '股票',
-    'Crypto': '加密貨幣', 'Fixed': '固定資產', 'Receivables': '應收帳款',
-    'Liabilities': '負債', 'Total': '總計',
 };
 
 interface AssetAllocationWidgetProps {
@@ -59,7 +54,7 @@ export function AssetAllocationWidget({ assets }: AssetAllocationWidgetProps) {
     return (
         <div>
             <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
                     資產配置
                 </h2>
                 <div className="flex gap-3">

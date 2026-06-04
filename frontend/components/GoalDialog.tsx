@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { API_URL } from '@/lib/api';
 import { Trash2 } from 'lucide-react';
 import type { Goal } from '@/lib/types';
+import { CATEGORY_ZH } from '@/lib/constants';
 
 // Categories available for allocation goals
 const ALLOCATION_CATEGORIES = ['Fluid', 'Stock', 'Crypto', 'Fixed', 'Receivables'];
@@ -199,7 +200,7 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
                         <div className="space-y-2">
                             {Object.entries(allocation).map(([cat, pct]) => (
                                 <div key={cat} className="flex items-center gap-3">
-                                    <span className="w-24 text-sm font-medium shrink-0">{({'Fluid':'流動資產','Investment':'投資','Stock':'股票','Crypto':'加密貨幣','Fixed':'固定資產','Receivables':'應收帳款','Liabilities':'負債'} as Record<string,string>)[cat] ?? cat}</span>
+                                    <span className="w-24 text-sm font-medium shrink-0">{(CATEGORY_ZH)[cat] ?? cat}</span>
                                     <div className="relative flex-1">
                                         <Input
                                             type="number"
@@ -234,7 +235,7 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
                                         onClick={() => addCategory(cat)}
                                         className="text-xs px-2.5 py-1 rounded-full border border-dashed border-border hover:border-primary hover:text-primary transition-colors"
                                     >
-                                        + {({'Fluid':'流動資產','Investment':'投資','Stock':'股票','Crypto':'加密貨幣','Fixed':'固定資產','Receivables':'應收帳款','Liabilities':'負債'} as Record<string,string>)[cat] ?? cat}
+                                        + {(CATEGORY_ZH)[cat] ?? cat}
                                     </button>
                                 ))}
                             </div>
