@@ -1,31 +1,32 @@
-# Yantage — Personal Asset Dashboard
+# Yantage — 個人資產儀表板
 
-Self-hosted personal finance dashboard. Track net worth across every asset class, connect to exchanges and on-chain wallets, and get portfolio analytics — all with local SQLite storage and zero cloud dependency.
+自架的個人財務儀表板。以單一可捲動頁面追蹤各類資產淨值，連接交易所與鏈上錢包，所有資料存於本機 SQLite，無雲端依賴。
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 ---
 
-## Features
+## 功能
 
-- **6 asset categories**: Fluid, Stock, Crypto, Fixed Assets, Receivables, Liabilities
-- **Real-time prices**: Taiwan/US stocks via Yahoo Finance, crypto via Binance CCXT
-- **Exchange sync**: MAX, Binance, Pionex — auto-sync balances with read-only API keys
-- **On-chain wallets**: Ethereum, Scroll, BSC via direct RPC (no third-party API)
-- **Analytics**: Net worth trend, monthly P&L, CAGR, Max Drawdown, Volatility
-- **Goal tracking**: FIRE target with projected date, asset allocation targets
-- **Budget planner**: Monthly limits, progress bars, income tracking
-- **Price alerts**: Trigger automatically after each price update cycle
-- **Multiple profiles**: Each profile uses its own independent SQLite DB
-- **Bilingual UI**: English + Traditional Chinese
-- **Privacy mode**: One-click mask of all monetary values
-- **PWA support**: Installable as desktop or mobile app
+- **6 大資產類別**：流動資產、股票、加密貨幣、固定資產、應收帳款、負債
+- **即時報價**：台股 / 美股透過 Yahoo Finance，加密貨幣透過 Binance CCXT
+- **交易所同步**：MAX、Binance、Pionex — 以唯讀 API Key 自動同步餘額
+- **鏈上錢包**：Ethereum、Scroll、BSC、Arbitrum — 直接 RPC，無第三方 API
+- **淨值趨勢圖**：可選時間區間（30天 / 3個月 / 6個月 / 1年 / 全部）
+- **月結快照**：歷史頁面切換「月結快照」tab，逐月淨值與漲跌一覽
+- **目標追蹤**：FIRE 淨值目標（含預測達成日）、資產配置目標
+- **預算規劃**：月度類別預算、收入追蹤、投資比率警示
+- **手動重整**：頂部 ↻ 按鈕一鍵觸發報價更新 + 當日快照
+- **隱私模式**：一鍵遮蔽全站數字
+- **PWA 支援**：可安裝至手機或桌面主畫面，全螢幕獨立視窗
+- **介面語言**：繁體中文（zh-TW）
+- **Morandi 主題**：溫暖米白底色，極簡紙質感設計
 
 ---
 
-## Docker (Recommended)
+## 快速啟動（Docker）
 
-**Prerequisites:** Docker with Compose plugin (Docker Desktop or Engine 20.10+)
+**前置需求：** Docker with Compose plugin（Docker Desktop 或 Engine 20.10+）
 
 ```bash
 git clone https://github.com/YuunJiee/Personal-Asset-Dash.git
@@ -33,70 +34,78 @@ cd Personal-Asset-Dash
 docker compose up --build
 ```
 
-- **Dashboard** → http://localhost:3001
-- **API docs** → http://localhost:8000/docs
+- **儀表板** → http://localhost:3001
+- **API 文件** → http://localhost:8000/docs
 
-Data is stored in the `yantage_data` named volume and survives container rebuilds.
+資料存於 `yantage_data` named volume，重建容器不會遺失。
 
-| Command | Purpose |
+| 指令 | 用途 |
 |---|---|
-| `docker compose up -d` | Start in background |
-| `docker compose down` | Stop |
-| `docker compose down -v` | Stop and **wipe data** ⚠️ |
-| `docker compose logs -f` | Tail logs |
-| `./scripts/update.sh` | `git pull` + rebuild + restart |
+| `docker compose up -d` | 背景啟動 |
+| `docker compose down` | 停止 |
+| `docker compose down -v` | 停止並 **清除資料** ⚠️ |
+| `docker compose logs -f` | 即時查看 log |
 
-**Migrate existing data into Docker:**
+**匯入現有資料：**
 ```bash
 docker run --rm -v yantage_data:/data -v "$(pwd)/backend":/src alpine \
-  sh -c "cp /src/sql_app*.db /src/config.json /data/ 2>/dev/null; echo done"
+  sh -c "cp /src/sql_app*.db /data/ 2>/dev/null; echo done"
 ```
 
 ---
 
-## Dev Setup (without Docker)
+## 開發環境（不用 Docker）
 
-**Prerequisites:** Python 3.8+, Node.js 18+
+**前置需求：** Python 3.8+、Node.js 18+
 
 ```bash
-# Backend
+# 後端
 cd backend
 pip install -r requirements.txt
 cp .env.example .env
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
-# Frontend (separate terminal)
+# 前端（另開終端機）
 cd frontend
 npm install
 npm run dev
 ```
 
-Or use `./scripts/dev.sh` to start both with hot reload.
-
 ---
 
-## Configuration
+## 環境變數
 
-| Variable | Default | Description |
+| 變數 | 預設值 | 說明 |
 |---|---|---|
-| `ALLOWED_ORIGINS` | `http://localhost:3000` | CORS allowed origins (comma-separated) |
+| `ALLOWED_ORIGINS` | `http://localhost:3000` | CORS 允許來源（逗號分隔） |
 | `LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
-| `YANTAGE_DATA_DIR` | *(backend dir)* | Directory for SQLite DB files + config.json |
+| `YANTAGE_DATA_DIR` | *(backend 目錄)* | SQLite DB 存放路徑 |
 
-In Docker these are set in `docker-compose.yml`. For local dev, create `backend/.env` from `backend/.env.example`.
+Docker 部署時在 `docker-compose.yml` 設定；本機開發從 `backend/.env.example` 複製為 `backend/.env`。
 
 ---
 
-## Nginx + Cloudflare Tunnel
+## 部署架構（Nginx + Cloudflare Tunnel）
 
 ```
-Internet → Cloudflare Tunnel (TLS) → Nginx (reverse proxy)
-              ├── /        → Next.js  :3001
-              └── /api     → FastAPI  :8000
+Internet → Cloudflare Tunnel (TLS) → Nginx
+              ├── /       → Next.js  :3001
+              └── /api    → FastAPI  :8000
 ```
+
+---
+
+## 技術棧
+
+| 層 | 技術 |
+|---|---|
+| 前端 | Next.js 19 · TypeScript · Tailwind CSS v4 |
+| 後端 | FastAPI · SQLAlchemy · SQLite |
+| 排程 | APScheduler（每日自動更新報價 + 快照） |
+| 容器 | Docker Compose |
 
 ---
 
 ## License
 
-MIT — free to use, modify, and distribute.
+MIT — 自由使用、修改、散佈。
