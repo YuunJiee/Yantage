@@ -128,7 +128,7 @@ export function AssetHistoryView({ asset, onEdit, onAdjustBalance }: Omit<AssetH
                                                 )}
                                             </div>
                                             <div className="text-[11px] text-muted-foreground">
-                                                {new Date(tx.date).toLocaleDateString()} · 餘額 {tx.balance.toLocaleString(undefined, {
+                                                {tx.date.slice(0, 10).replace(/-/g, '/')} · 餘額 {tx.balance.toLocaleString(undefined, {
                                                     minimumFractionDigits: isCrypto ? 8 : 0,
                                                     maximumFractionDigits: isCrypto ? 8 : 2
                                                 })}

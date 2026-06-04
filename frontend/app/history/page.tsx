@@ -157,7 +157,7 @@ export default function HistoryPage() {
                                             <div>
                                                 <div className="text-sm font-medium text-foreground">{txn.assetName}</div>
                                                 <div className="text-[11px] text-muted-foreground mt-0.5">
-                                                    {new Date(txn.date).toLocaleDateString('zh-TW')} · {CATEGORY_ZH[txn.category] ?? txn.category}
+                                                    {txn.date.slice(0, 10).replace(/-/g, '/')} · {CATEGORY_ZH[txn.category] ?? txn.category}
                                                 </div>
                                             </div>
                                             <div className="text-right">
@@ -194,7 +194,10 @@ export default function HistoryPage() {
                                                 className={cn('transition-colors', txn.assetSource === 'max' ? 'cursor-default' : 'hover:bg-muted/40 cursor-pointer')}
                                             >
                                                 <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                                                    {new Date(txn.date).toLocaleString('zh-TW', { hour12: false, timeZone: 'Asia/Taipei' })}
+                                                    {(() => {
+                                                        const d = new Date(new Date(txn.date).getTime() + 8 * 3600000);
+                                                        return `${d.getUTCFullYear()}/${d.getUTCMonth()+1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
+                                                    })()}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="text-sm font-medium text-foreground">{txn.assetName}</div>

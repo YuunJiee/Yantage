@@ -325,7 +325,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onAddClic
                                                 )}
                                                 {asset.last_updated_at && (
                                                     <span className="text-[11px] text-muted-foreground/60">
-                                                        {new Date(asset.last_updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
+                                                        {asset.last_updated_at.slice(5, 10).replace('-', '/')}
                                                     </span>
                                                 )}
                                                 {asset.category === 'Liabilities' && asset.payment_due_day && (

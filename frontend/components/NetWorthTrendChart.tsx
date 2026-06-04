@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from "@/lib/utils";
 import { usePrivacy } from "@/components/PrivacyProvider";
@@ -19,6 +19,42 @@ export function NetWorthTrendChart({ className }: NetWorthTrendChartProps) {
     useEffect(() => { setMounted(true); }, []);
 
     const { history: data, isLoading } = useNetWorthHistory(range);
+
+    // Compute tick positions: snap to the closest data point on/after the 1st of each month.
+    // For 30d use weekly ticks; longer ranges skip months based on span.
+    const ticks = useMemo(() => {
+        if (!data || data.length === 0) return [];
+        const dates = data.map(d => d.date);
+
+        if (range === '30d') {
+            // ~4 weekly ticks
+            const result: string[] = [];
+            for (let i = 0; i < dates.length; i += Math.max(1, Math.floor(dates.length / 4))) {
+                result.push(dates[i]);
+            }
+            return [...new Set(result)];
+        }
+
+        const monthStep = range === 'all' ? 3 : range === '1y' ? 2 : 1;
+        const first = new Date(dates[0] + 'T12:00:00');
+        const last  = new Date(dates[dates.length - 1] + 'T12:00:00');
+        const seen  = new Set<string>();
+        const result: string[] = [];
+
+        let y = first.getFullYear();
+        let m = first.getMonth();
+
+        while (true) {
+            if (new Date(y, m, 1) > last) break;
+            const pad = (n: number) => String(n).padStart(2, '0');
+            const target = `${y}-${pad(m + 1)}-01`;
+            const closest = dates.find(d => d >= target);
+            if (closest && !seen.has(closest)) { seen.add(closest); result.push(closest); }
+            m += monthStep;
+            if (m >= 12) { m -= 12; y++; }
+        }
+        return result;
+    }, [data, range]);
 
     if (!mounted) return <div className={cn("h-[320px]", className)} />;
 
@@ -69,11 +105,15 @@ export function NetWorthTrendChart({ className }: NetWorthTrendChartProps) {
                                 tickLine={false}
                                 axisLine={false}
                                 tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                                tickFormatter={(str) => {
-                                    const d = new Date(str);
-                                    return `${d.getMonth() + 1}/${d.getDate()}`;
+                                ticks={ticks}
+                                tickFormatter={(str: string) => {
+                                    const parts = str.split('-');
+                                    if (range === '30d') {
+                                        return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
+                                    }
+                                    // Show as M/1 regardless of actual day — tick is snapped to near-1st
+                                    return `${parseInt(parts[1])}/1`;
                                 }}
-                                interval="preserveStartEnd"
                             />
                             <YAxis
                                 tickLine={false}
