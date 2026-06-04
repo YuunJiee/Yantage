@@ -33,6 +33,12 @@ def snapshot_net_worth(db: Session) -> None:
             breakdown[asset.category] = breakdown.get(asset.category, 0.0) + val
 
     rounded = round(net_worth, 0)
+
+    # Skip writing if net worth is zero — likely means prices failed to fetch
+    if rounded == 0:
+        logger.info("Net worth snapshot skipped: calculated value is 0 (possible price fetch failure)")
+        return
+
     breakdown_json = json.dumps({k: round(v, 0) for k, v in breakdown.items()})
 
     try:
