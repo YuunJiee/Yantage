@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CustomSelect } from "@/components/ui/custom-select";
-import { Download, Trash2, History, PieChart, ChevronRight } from 'lucide-react';
+import { Download, Trash2, History, PieChart, ChevronRight, SquareSplitHorizontal } from 'lucide-react';
 import { CategoryVisibility } from "@/components/CategoryVisibility";
 import { fetchSetting, updateSetting, fetchDashboardData, API_URL } from '@/lib/api';
 
 export default function SettingsPage() {
     const [budgetStartDay, setBudgetStartDay] = useState('1');
     const [updateInterval, setUpdateInterval] = useState('60');
+    const [resetStep, setResetStep] = useState(0);
 
     useEffect(() => {
         Promise.all([
@@ -48,19 +49,16 @@ export default function SettingsPage() {
     };
 
     const handleReset = async () => {
-        if (!confirm('確定要刪除所有資料？此操作無法復原。')) return;
-        if (!confirm('再次確認：所有資產、交易紀錄和目標都將遺失。確定重置？')) return;
         try {
             const res = await fetch(`${API_URL}/system/reset`, { method: 'DELETE' });
             if (res.ok) {
-                alert('系統已恢復出廠設定。');
                 window.location.href = '/';
             } else {
-                alert('重置失敗。請檢查伺服器日誌。');
+                setResetStep(0);
             }
         } catch (e) {
             console.error(e);
-            alert('重置失敗。伺服器可能已離線。');
+            setResetStep(0);
         }
     };
 
@@ -87,6 +85,13 @@ export default function SettingsPage() {
                         <div className="flex items-center gap-3">
                             <History className="w-4 h-4 text-muted-foreground" />
                             <span className="text-sm font-medium">歷史紀錄</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+                    </Link>
+                    <Link href="/subscriptions" className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors">
+                        <div className="flex items-center gap-3">
+                            <SquareSplitHorizontal className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">分帳訂閱</span>
                         </div>
                         <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
                     </Link>
@@ -173,16 +178,33 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between px-4 py-3">
                         <div>
                             <p className="text-sm font-medium text-red-500">系統重置</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">刪除所有資產、交易紀錄和目標</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                {resetStep === 0 && '刪除所有資產、交易紀錄和目標'}
+                                {resetStep === 1 && '確定要刪除所有資料？此操作無法復原。'}
+                                {resetStep === 2 && '最後確認：所有資料將永久消失。'}
+                            </p>
                         </div>
-                        <Button variant="destructive" onClick={handleReset}>
-                            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> 重置
-                        </Button>
+                        {resetStep === 0 && (
+                            <Button variant="destructive" onClick={() => setResetStep(1)}>
+                                <Trash2 className="w-3.5 h-3.5 mr-1.5" /> 重置
+                            </Button>
+                        )}
+                        {resetStep === 1 && (
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={() => setResetStep(0)}>取消</Button>
+                                <Button variant="destructive" onClick={() => setResetStep(2)}>確定</Button>
+                            </div>
+                        )}
+                        {resetStep === 2 && (
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={() => setResetStep(0)}>取消</Button>
+                                <Button variant="destructive" onClick={handleReset}>確定清除</Button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>
 
-            <p className="text-center text-xs text-muted-foreground">Yantage v2.3</p>
         </div>
     );
 }

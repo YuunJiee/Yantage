@@ -6,6 +6,7 @@ import { usePrivacy } from "@/components/PrivacyProvider";
 import { fetchGoals, fetchForecast } from '@/lib/api';
 import type { Goal, GoalForecast, DashboardData, Asset } from '@/lib/types';
 import { CATEGORY_ZH } from '@/lib/constants';
+import { Target } from 'lucide-react';
 
 function parseAllocation(data?: string | null): Record<string, number> | null {
     if (!data) return null;
@@ -17,10 +18,11 @@ function parseAllocation(data?: string | null): Record<string, number> | null {
 }
 
 
-export function GoalWidget({ dashboardData, refreshTrigger, onEditGoal }: {
+export function GoalWidget({ dashboardData, refreshTrigger, onEditGoal, onAddGoal }: {
     dashboardData: DashboardData | null | undefined;
     refreshTrigger: number;
     onEditGoal: (goal: Goal) => void;
+    onAddGoal: () => void;
 }) {
     const { isPrivacyMode } = usePrivacy();
     const [goals, setGoals] = useState<Goal[]>([]);
@@ -46,7 +48,15 @@ export function GoalWidget({ dashboardData, refreshTrigger, onEditGoal }: {
 
     const fmt = (n: number) => isPrivacyMode ? '••••' : `$${new Intl.NumberFormat('en-US', { notation: 'compact' }).format(n)}`;
 
-    if (goals.length === 0) return null;
+    if (goals.length === 0) return (
+        <button
+            onClick={onAddGoal}
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-border/60 text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors group"
+        >
+            <Target className="w-4 h-4 shrink-0 group-hover:text-foreground transition-colors" />
+            <span className="text-sm">設定財務目標</span>
+        </button>
+    );
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -56,6 +66,8 @@ export function GoalWidget({ dashboardData, refreshTrigger, onEditGoal }: {
                 if (goal.goal_type === 'NET_WORTH') {
                     const progress = Math.min((netWorth / goal.target_amount) * 100, 100);
                     const forecast = forecasts[goal.id];
+                    const remaining = goal.target_amount - netWorth;
+                    const isComplete = netWorth >= goal.target_amount;
 
                     return (
                         <div
@@ -69,10 +81,18 @@ export function GoalWidget({ dashboardData, refreshTrigger, onEditGoal }: {
                                     {fmt(netWorth)} / {fmt(goal.target_amount)}
                                 </span>
                             </div>
-                            <div className="flex items-end gap-2 mb-2">
-                                <span className="font-display text-[1.6rem] font-medium tracking-tight tabular-nums leading-none">{progress.toFixed(1)}%</span>
-                                {forecast && (
-                                    <span className="text-[11px] text-muted-foreground/70 mb-0.5">預計 {forecast.predicted_date}</span>
+                            <div className="flex items-end justify-between mb-2">
+                                <div className="flex items-end gap-2">
+                                    <span className="font-display text-[1.6rem] font-medium tracking-tight tabular-nums leading-none">{progress.toFixed(1)}%</span>
+                                    {forecast && !isComplete && (
+                                        <span className="text-[11px] text-muted-foreground/70 mb-0.5">預計 {forecast.predicted_date}</span>
+                                    )}
+                                    {isComplete && (
+                                        <span className="text-[11px] text-emerald-600 mb-0.5 font-medium">已達成</span>
+                                    )}
+                                </div>
+                                {!isComplete && (
+                                    <span className="text-[11px] text-muted-foreground/60 tabular-nums">還差 {fmt(remaining)}</span>
                                 )}
                             </div>
                             <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">

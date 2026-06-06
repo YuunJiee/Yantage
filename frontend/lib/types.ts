@@ -139,3 +139,41 @@ export interface RiskMetricsResponse {
     maxDrawdown: MetricData;
     volatility: MetricData;
 }
+
+// --- Subscription split types ---
+
+export interface SubscriptionMember {
+    id: number;
+    subscription_id: number;
+    name: string;
+}
+
+export interface CyclePayment {
+    id: number;
+    cycle_id: number;
+    member_id: number;
+    paid_at: string | null;
+    note: string | null;
+    member: SubscriptionMember;
+}
+
+export interface CollectionCycle {
+    id: number;
+    subscription_id: number;
+    cycle_start: string;
+    note: string | null;
+    created_at: string;
+    payments: CyclePayment[];
+}
+
+export interface Subscription {
+    id: number;
+    name: string;
+    total_cost: number;
+    total_shares: number;
+    my_shares: number;
+    collection_period_months: number;
+    created_at: string;
+    members: SubscriptionMember[];
+    cycles: CollectionCycle[];
+}

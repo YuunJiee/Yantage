@@ -19,8 +19,16 @@ export function QuickAdjustView({ asset, onClose, onBack }: QuickAdjustViewProps
     const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<'set' | 'adjust'>('set');
     const [value, setValue] = useState('');
+    const [price, setPrice] = useState(String(asset.current_price || ''));
+
+    const nowLocal = () => {
+        const now = new Date();
+        return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    };
+    const [date, setDate] = useState(nowLocal);
 
     const currentBalance = asset.transactions?.reduce((acc, t) => acc + t.amount, 0) ?? 0;
+    const needsPrice = asset.category === 'Stock' || asset.category === 'Crypto';
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -32,15 +40,15 @@ export function QuickAdjustView({ asset, onClose, onBack }: QuickAdjustViewProps
             if (diff !== 0) {
                 await createTransaction(asset.id, {
                     amount: diff,
-                    buy_price: asset.current_price || 1,
-                    date: new Date().toISOString()
+                    buy_price: parseFloat(price) || asset.current_price || 1,
+                    date: new Date(date).toISOString(),
                 });
             }
             router.refresh();
             onClose();
             setValue('');
         } catch (error) {
-            console.error("Failed to adjust balance", error);
+            console.error('Failed to adjust balance', error);
         } finally {
             setLoading(false);
         }
@@ -87,11 +95,11 @@ export function QuickAdjustView({ asset, onClose, onBack }: QuickAdjustViewProps
 
                 <div className="space-y-1.5">
                     <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">
-                        {mode === 'set' ? '新餘額' : '增減金額'}
+                        {mode === 'set' ? '新餘額' : '增減金額（負數為賣出/支出）'}
                     </p>
                     <MoneyInput
                         autoFocus
-                        placeholder={mode === 'set' ? "例如：5000" : "例如：-200"}
+                        placeholder={mode === 'set' ? '例如：5000' : '例如：-200'}
                         className="tabular-nums text-xl h-12"
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
@@ -104,6 +112,32 @@ export function QuickAdjustView({ asset, onClose, onBack }: QuickAdjustViewProps
                         </p>
                     )}
                 </div>
+
+                {/* ── 日期 ────────────────────────────────── */}
+                <div className="space-y-1.5">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">日期</p>
+                    <input
+                        type="datetime-local"
+                        value={date}
+                        onChange={e => setDate(e.target.value)}
+                        className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                </div>
+
+                {/* ── 成交價（股票 / 加密） ─────────────────── */}
+                {needsPrice && (
+                    <div className="space-y-1.5">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">
+                            {asset.category === 'Stock' ? '成交價（TWD）' : '成交價（USD）'}
+                        </p>
+                        <MoneyInput
+                            value={price}
+                            onChange={e => setPrice(e.target.value)}
+                            placeholder="例如：150.00"
+                            className="tabular-nums"
+                        />
+                    </div>
+                )}
             </div>
 
             {/* ── 操作 ─────────────────────────────────── */}

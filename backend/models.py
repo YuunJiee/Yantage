@@ -108,3 +108,56 @@ class NetWorthHistory(Base):
     value = Column(Float)
     breakdown = Column(String, nullable=True)   # JSON: {"Fluid": 100, "Stock": 200, ...}
     created_at = Column(DateTime, default=datetime.now)
+
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    total_cost = Column(Float)            # 每個收款週期的總費用
+    total_shares = Column(Integer)        # 總份數（所有人）
+    my_shares = Column(Integer)           # 我自己負責的份數
+    collection_period_months = Column(Integer, default=6)  # 收款週期（月）
+    created_at = Column(DateTime, default=datetime.now)
+
+    members = relationship("SubscriptionMember", back_populates="subscription", cascade="all, delete-orphan")
+    cycles = relationship("CollectionCycle", back_populates="subscription", cascade="all, delete-orphan")
+
+
+class SubscriptionMember(Base):
+    """需要向我付款的成員（不含我自己負責的份）"""
+    __tablename__ = "subscription_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    subscription_id = Column(Integer, ForeignKey("subscriptions.id"))
+    name = Column(String)
+
+    subscription = relationship("Subscription", back_populates="members")
+    payments = relationship("CyclePayment", back_populates="member", cascade="all, delete-orphan")
+
+
+class CollectionCycle(Base):
+    __tablename__ = "collection_cycles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    subscription_id = Column(Integer, ForeignKey("subscriptions.id"))
+    cycle_start = Column(String)          # YYYY-MM-DD
+    note = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+
+    subscription = relationship("Subscription", back_populates="cycles")
+    payments = relationship("CyclePayment", back_populates="cycle", cascade="all, delete-orphan")
+
+
+class CyclePayment(Base):
+    __tablename__ = "cycle_payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cycle_id = Column(Integer, ForeignKey("collection_cycles.id"))
+    member_id = Column(Integer, ForeignKey("subscription_members.id"))
+    paid_at = Column(String, nullable=True)   # YYYY-MM-DD，null = 未付
+    note = Column(String, nullable=True)
+
+    cycle = relationship("CollectionCycle", back_populates="payments")
+    member = relationship("SubscriptionMember", back_populates="payments")

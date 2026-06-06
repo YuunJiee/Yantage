@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog } from "@/components/ui/dialog";
+import { Sheet } from "@/components/ui/sheet";
 import { Select } from "@/components/ui/select";
-import { Trash2, Plus, Key, Wallet, Globe, RefreshCw, Bitcoin } from "lucide-react";
+import { Trash2, Plus, Key, Wallet, Globe, RefreshCw, Bitcoin, CheckCircle2, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { API_URL } from '@/lib/api';
+import { cn } from "@/lib/utils";
 
 interface Connection {
     id: number;
@@ -21,8 +22,11 @@ interface Connection {
 
 export function IntegrationManager() {
     const [connections, setConnections] = useState<Connection[]>([]);
+    const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [addError, setAddError] = useState('');
+    const [syncStatus, setSyncStatus] = useState<Record<string, 'syncing' | 'ok' | 'error'>>({});
     const router = useRouter();
 
     // New Connection State
@@ -47,6 +51,7 @@ export function IntegrationManager() {
 
     const handleAdd = async () => {
         setLoading(true);
+        setAddError('');
         try {
             let defaultName = `${newType} Connection`;
             if (newType === 'max') defaultName = 'MAX';
@@ -71,25 +76,24 @@ export function IntegrationManager() {
             if (res.ok) {
                 setIsOpen(false);
                 fetchConnections();
-                // Reset form
                 setNewName("");
                 setApiKey("");
                 setApiSecret("");
                 setAddress("");
             } else {
-                alert("Failed to add connection");
+                setAddError("新增失敗，請確認 API Key 正確");
             }
         } catch {
-            alert("Error adding connection");
+            setAddError("連線錯誤，請稍後再試");
         } finally {
             setLoading(false);
         }
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm("Are you sure? This will delete the connection and associated assets.")) return;
         try {
             await fetch(`${API_URL}/integrations/${id}`, { method: 'DELETE' });
+            setPendingDeleteId(null);
             fetchConnections();
         } catch (e) {
             console.error(e);
@@ -97,73 +101,97 @@ export function IntegrationManager() {
     };
 
     const handleSync = async (provider: string) => {
-        // Trigger sync for all of this provider
+        setSyncStatus(prev => ({ ...prev, [provider]: 'syncing' }));
         try {
-            // Endpoints map 1:1 with provider names (max, pionex, wallet)
-            const endpoint = provider;
-            const res = await fetch(`${API_URL}/integrations/sync/${endpoint}`, { method: 'POST' });
-            if (res.ok) {
-                alert(`Synced ${provider} successfully!`);
-                router.refresh();
-            } else alert("Sync failed.");
+            const res = await fetch(`${API_URL}/integrations/sync/${provider}`, { method: 'POST' });
+            setSyncStatus(prev => ({ ...prev, [provider]: res.ok ? 'ok' : 'error' }));
+            if (res.ok) router.refresh();
         } catch {
-            alert("Sync error.");
+            setSyncStatus(prev => ({ ...prev, [provider]: 'error' }));
         }
+        // Clear status after 3s
+        setTimeout(() => setSyncStatus(prev => {
+            const next = { ...prev };
+            delete next[provider];
+            return next;
+        }), 3000);
     };
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold tracking-tight">串接整合</h2>
+            <div className="flex justify-end">
                 <Button onClick={() => setIsOpen(true)}>
                     <Plus className="w-4 h-4 mr-2" /> 新增連線
                 </Button>
             </div>
 
             <div className="flex flex-col gap-4">
-                {connections.map(conn => (
-                    <div key={conn.id} className="bg-card border border-border rounded-xl p-3 flex items-center justify-between shadow-sm">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="p-2 bg-muted rounded-lg shrink-0">
-                                {conn.provider === 'pionex' ? <Key className="w-5 h-5 text-orange-500" /> :
-                                    conn.provider === 'max' ? <Globe className="w-5 h-5 text-blue-500" /> :
-                                        conn.provider === 'binance' ? <Bitcoin className="w-5 h-5 text-yellow-500" /> :
-                                            <Wallet className="w-5 h-5 text-purple-500" />}
-                            </div>
-                            <div className="min-w-0">
-                                <div className="font-semibold text-sm truncate">{conn.name}</div>
-                                <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                                    <span className="capitalize">{conn.provider}</span>
-                                    <span className="opacity-40">•</span>
-                                    <span className="font-mono opacity-70 truncate max-w-[150px]">
-                                        {conn.provider === 'wallet' ? conn.address : conn.api_key_masked}
-                                    </span>
+                {connections.map(conn => {
+                    const status = syncStatus[conn.provider];
+                    return (
+                        <div key={conn.id} className="bg-card border border-border rounded-xl p-3 flex items-center justify-between shadow-sm">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="p-2 bg-muted rounded-lg shrink-0">
+                                    {conn.provider === 'pionex' ? <Key className="w-5 h-5 text-orange-500" /> :
+                                        conn.provider === 'max' ? <Globe className="w-5 h-5 text-blue-500" /> :
+                                            conn.provider === 'binance' ? <Bitcoin className="w-5 h-5 text-yellow-500" /> :
+                                                <Wallet className="w-5 h-5 text-purple-500" />}
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="font-semibold text-sm truncate">{conn.name}</div>
+                                    <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                        <span className="capitalize">{conn.provider}</span>
+                                        <span className="opacity-40">•</span>
+                                        <span className="font-mono opacity-70 truncate max-w-[150px]">
+                                            {conn.provider === 'wallet' ? conn.address : conn.api_key_masked}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                {status === 'ok' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                                {status === 'error' && <XCircle className="w-4 h-4 text-destructive" />}
+                                <Button
+                                    variant="outline"
+                                    className={cn("h-8 px-3 text-xs", status === 'syncing' && "opacity-60")}
+                                    onClick={() => handleSync(conn.provider)}
+                                    disabled={status === 'syncing'}
+                                >
+                                    <RefreshCw className={cn("w-3.5 h-3.5 md:mr-1.5", status === 'syncing' && "animate-spin")} />
+                                    <span className="hidden md:inline">同步</span>
+                                </Button>
+                                {conn.provider === 'wallet' && (
+                                    <span className="text-[10px] text-muted-foreground ml-1 hidden md:inline">含自動掃描</span>
+                                )}
+                                {pendingDeleteId === conn.id ? (
+                                    <div className="flex items-center gap-1.5">
+                                        <button onClick={() => handleDelete(conn.id)}
+                                            className="text-xs font-medium text-destructive hover:text-destructive/80 transition-colors">
+                                            確定
+                                        </button>
+                                        <button onClick={() => setPendingDeleteId(null)}
+                                            className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                                            取消
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <Button variant="ghost" onClick={() => setPendingDeleteId(conn.id)} className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive">
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <Button variant="outline" className="h-8 px-3 text-xs" onClick={() => handleSync(conn.provider)}>
-                                <RefreshCw className="w-3.5 h-3.5 md:mr-1.5" />
-                                <span className="hidden md:inline">Sync</span>
-                            </Button>
-                            {conn.provider === 'wallet' && (
-                                <span className="text-[10px] text-muted-foreground ml-2 hidden md:inline">包含自動掃描</span>
-                            )}
-                            <Button variant="ghost" onClick={() => handleDelete(conn.id)} className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive">
-                                <Trash2 className="w-4 h-4" />
-                            </Button>
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
 
                 {connections.length === 0 && (
-                    <div className="col-span-full py-8 text-center text-muted-foreground text-sm border border-dashed border-border rounded-xl">
+                    <div className="py-8 text-center text-muted-foreground text-sm border border-dashed border-border rounded-xl">
                         尚未連接任何整合。新增一個來追蹤您的加密貨幣。
                     </div>
                 )}
             </div>
 
-            <Dialog isOpen={isOpen} onClose={() => setIsOpen(false)} title="新增整合">
+            <Sheet isOpen={isOpen} onClose={() => { setIsOpen(false); setAddError(''); }} title="新增整合">
                 <div className="space-y-4 py-2">
                     <div className="space-y-2">
                         <Label>提供者類型</Label>
@@ -198,14 +226,18 @@ export function IntegrationManager() {
                         </>
                     )}
 
+                    {addError && (
+                        <p className="text-sm text-destructive">{addError}</p>
+                    )}
+
                     <div className="flex justify-end gap-2 pt-4">
-                        <Button variant="outline" onClick={() => setIsOpen(false)}>取消</Button>
+                        <Button variant="outline" onClick={() => { setIsOpen(false); setAddError(''); }}>取消</Button>
                         <Button onClick={handleAdd} disabled={loading}>
                             {loading ? '新增中...' : '新增整合'}
                         </Button>
                     </div>
                 </div>
-            </Dialog>
-        </div >
+            </Sheet>
+        </div>
     );
 }

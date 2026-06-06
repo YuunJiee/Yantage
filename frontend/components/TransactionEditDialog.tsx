@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog } from "@/components/ui/dialog";
+import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { updateTransaction, deleteTransaction } from "@/lib/api";
@@ -20,6 +20,7 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
     const [amount, setAmount] = useState("");
     const [price, setPrice] = useState("");
     const [loading, setLoading] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
     useEffect(() => {
         if (transaction) {
@@ -52,7 +53,6 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
 
     const handleDelete = async () => {
         if (!transaction) return;
-        if (!confirm('確定刪除這筆交易？此操作無法復原。')) return;
         setLoading(true);
         try {
             await deleteTransaction(transaction.id);
@@ -69,7 +69,7 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
     if (!transaction) return null;
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title="編輯交易">
+        <Sheet isOpen={isOpen} onClose={onClose} title="編輯交易">
             <div className="space-y-0">
 
                 {/* ── 日期 ────────────────────────────────── */}
@@ -108,21 +108,31 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
 
                 {/* ── 操作 ────────────────────────────────── */}
                 <div className="border-t border-border/20 pt-4 flex items-center justify-between">
-                    <button
-                        type="button"
-                        onClick={handleDelete}
-                        disabled={loading}
-                        className="flex items-center gap-1.5 text-sm text-destructive/70 hover:text-destructive transition-colors disabled:opacity-50"
-                    >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        刪除
-                    </button>
+                    {confirmDelete ? (
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-destructive">確定刪除？</span>
+                            <button type="button" onClick={handleDelete} disabled={loading}
+                                className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50">
+                                {loading ? '刪除中…' : '確定'}
+                            </button>
+                            <button type="button" onClick={() => setConfirmDelete(false)}
+                                className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                取消
+                            </button>
+                        </div>
+                    ) : (
+                        <button type="button" onClick={() => setConfirmDelete(true)} disabled={loading}
+                            className="flex items-center gap-1.5 text-sm text-destructive/70 hover:text-destructive transition-colors disabled:opacity-50">
+                            <Trash2 className="w-3.5 h-3.5" />
+                            刪除
+                        </button>
+                    )}
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={onClose} disabled={loading}>取消</Button>
                         <Button onClick={handleSave} disabled={loading}>{loading ? '儲存中…' : '儲存'}</Button>
                     </div>
                 </div>
             </div>
-        </Dialog>
+        </Sheet>
     );
 }

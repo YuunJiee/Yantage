@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Plus, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -36,7 +36,6 @@ interface AssetAccordionProps {
     totalAmount: number;
     assets: Asset[];
     color: string;
-    onAddClick?: () => void;
     onTitleClick?: () => void;
     onActionClick?: () => void;
     actionIcon?: React.ReactNode;
@@ -45,7 +44,7 @@ interface AssetAccordionProps {
     percentage?: number;
 }
 
-export function AssetAccordion({ category, title, totalAmount, assets, onAddClick, onTitleClick, onActionClick, actionIcon, className, isEditMode, percentage }: AssetAccordionProps) {
+export function AssetAccordion({ category, title, totalAmount, assets, onTitleClick, onActionClick, actionIcon, className, isEditMode, percentage }: AssetAccordionProps) {
     const [isOpen, setIsOpen] = useState(true);
     const [isMounted, setIsMounted] = useState(false);
     const [expandedWeb3Groups, setExpandedWeb3Groups] = useState<Record<string, boolean>>({});
@@ -191,16 +190,6 @@ export function AssetAccordion({ category, title, totalAmount, assets, onAddClic
                             <span className="w-3.5 h-3.5 block [&>svg]:w-3.5 [&>svg]:h-3.5">{actionIcon}</span>
                         </button>
                     )}
-                    {onAddClick && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onAddClick(); }}
-                            className="p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                            title="新增資產"
-                        >
-                            <Plus className="w-3.5 h-3.5" />
-                        </button>
-                    )}
-
                     {/* Total amount */}
                     <span className="text-sm font-semibold text-foreground tabular-nums">
                         {isPrivacyMode ? '••••' : `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(totalAmount)}`}

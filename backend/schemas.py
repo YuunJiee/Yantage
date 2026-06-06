@@ -194,3 +194,85 @@ class ConnectionResponse(BaseModel):
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# --- Subscription / Split schemas ---
+
+class SubscriptionMemberBase(BaseModel):
+    name: str
+
+class SubscriptionMemberCreate(SubscriptionMemberBase):
+    pass
+
+class SubscriptionMember(SubscriptionMemberBase):
+    id: int
+    subscription_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CyclePaymentBase(BaseModel):
+    member_id: int
+    paid_at: Optional[str] = None
+    note: Optional[str] = None
+
+class CyclePaymentCreate(CyclePaymentBase):
+    pass
+
+class CyclePaymentUpdate(BaseModel):
+    paid_at: Optional[str] = None
+    note: Optional[str] = None
+
+class CyclePayment(CyclePaymentBase):
+    id: int
+    cycle_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CyclePaymentWithMember(CyclePayment):
+    member: SubscriptionMember
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CollectionCycleBase(BaseModel):
+    cycle_start: str
+    note: Optional[str] = None
+
+class CollectionCycleCreate(CollectionCycleBase):
+    pass
+
+class CollectionCycle(CollectionCycleBase):
+    id: int
+    subscription_id: int
+    created_at: datetime
+    payments: List[CyclePaymentWithMember] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SubscriptionBase(BaseModel):
+    name: str
+    total_cost: float
+    total_shares: int
+    my_shares: int
+    collection_period_months: Optional[int] = 6
+
+class SubscriptionCreate(SubscriptionBase):
+    members: List[SubscriptionMemberCreate] = []
+
+class SubscriptionUpdate(BaseModel):
+    name: Optional[str] = None
+    total_cost: Optional[float] = None
+    total_shares: Optional[int] = None
+    my_shares: Optional[int] = None
+    collection_period_months: Optional[int] = None
+
+class Subscription(SubscriptionBase):
+    id: int
+    created_at: datetime
+    members: List[SubscriptionMember] = []
+    cycles: List[CollectionCycle] = []
+
+    model_config = ConfigDict(from_attributes=True)

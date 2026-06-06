@@ -19,6 +19,7 @@ interface EditAssetViewProps {
 export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
     const [formData, setFormData] = useState<{
         name: string;
@@ -78,7 +79,6 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
 
     const handleDelete = async () => {
         if (!asset) return;
-        if (!confirm('您確定要刪除這項資產嗎？')) return;
         setLoading(true);
         try {
             await deleteAsset(asset.id);
@@ -128,7 +128,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
     if (!asset) return null;
 
     return (
-        <div className="max-h-[80vh] overflow-y-auto px-1">
+        <div className="px-1">
             <form onSubmit={handleSubmit} className="space-y-6">
 
                 {asset.source === 'max' && (
@@ -232,9 +232,23 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                             </Button>
                         )}
                         {asset.source !== 'max' && (
-                            <Button type="button" variant="ghost" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={handleDelete}>
-                                <Trash2 className="w-4 h-4 mr-1" /> 刪除
-                            </Button>
+                            confirmDelete ? (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-destructive">確定刪除？</span>
+                                    <button type="button" onClick={handleDelete} disabled={loading}
+                                        className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50">
+                                        {loading ? '刪除中…' : '確定'}
+                                    </button>
+                                    <button type="button" onClick={() => setConfirmDelete(false)}
+                                        className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                        取消
+                                    </button>
+                                </div>
+                            ) : (
+                                <Button type="button" variant="ghost" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => setConfirmDelete(true)}>
+                                    <Trash2 className="w-4 h-4 mr-1" /> 刪除
+                                </Button>
+                            )
                         )}
                     </div>
                     <div className="flex gap-2">

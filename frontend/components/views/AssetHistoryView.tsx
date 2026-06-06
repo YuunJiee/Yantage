@@ -28,7 +28,7 @@ export function AssetHistoryView({ asset, onEdit, onAdjustBalance }: Omit<AssetH
         .reverse();
 
     const totalQuantity = asset.transactions?.reduce((sum, tx) => sum + tx.amount, 0) || 0;
-    const totalValue = (asset.current_price ?? 0) * totalQuantity;
+    const totalValue = asset.value_twd ?? (asset.current_price ?? 0) * totalQuantity;
     const isCrypto = asset.sub_category?.includes('Crypto');
 
     const isManaged = ['max', 'pionex', 'binance'].includes(asset['source'] || '');

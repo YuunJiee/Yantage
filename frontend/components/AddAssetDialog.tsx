@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/toast';
-import { Dialog } from "@/components/ui/dialog";
+import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from '@/components/ui/MoneyInput';
@@ -256,7 +256,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
     );
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title="新增資產">
+        <Sheet isOpen={isOpen} onClose={onClose} title="新增資產">
             <form onSubmit={handleSubmit} className="space-y-0">
 
                 {/* ── 名稱 & 圖示 ───────────────────────── */}
@@ -467,6 +467,6 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                     </Button>
                 </div>
             </form>
-        </Dialog>
+        </Sheet>
     );
 }

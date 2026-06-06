@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog } from '@/components/ui/dialog';
+import { Sheet } from '@/components/ui/sheet';
 import { AssetHistoryView } from './views/AssetHistoryView';
 import { EditAssetView } from './views/EditAssetView';
 import { QuickAdjustView } from './views/QuickAdjustView';
@@ -37,15 +37,15 @@ export function AssetActionDialog({ isOpen, onClose, asset, initialMode = 'histo
     const getTitle = () => {
         switch (mode) {
             case 'edit':   return '編輯資產';
-            case 'adjust': return `調整餘額`;
+            case 'adjust': return '調整餘額';
             default:       return asset?.name || '';
         }
     };
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title={getTitle()}>
+        <Sheet isOpen={isOpen} onClose={onClose} title={getTitle()}>
             <DynamicContent mode={mode} asset={asset} onClose={onClose} setMode={setMode} />
-        </Dialog>
+        </Sheet>
     );
 }
 

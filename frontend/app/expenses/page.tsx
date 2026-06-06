@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Trash2, Pencil, ShieldCheck, AlertTriangle, AlertCircle } from 'lucide-react';
-import { Dialog } from '@/components/ui/dialog';
+import { Sheet } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { usePrivacy } from "@/components/PrivacyProvider";
@@ -38,6 +38,7 @@ export default function BudgetPage() {
     const { dashboard } = useDashboard();
 
     const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
+    const [confirmBudgetDelete, setConfirmBudgetDelete] = useState(false);
     const [editingBudgetId, setEditingBudgetId] = useState<number | null>(null);
     const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
     const [editingIncomeItem, setEditingIncomeItem] = useState<IncomeItem | null>(null);
@@ -64,9 +65,10 @@ export default function BudgetPage() {
     };
 
     const handleBudgetDelete = async () => {
-        if (!editingBudgetId || !confirm('確定要刪除此預算類別嗎？')) return;
+        if (!editingBudgetId) return;
         await fetch(`${API_URL}/budgets/categories/${editingBudgetId}`, { method: 'DELETE' });
         setIsBudgetDialogOpen(false);
+        setConfirmBudgetDelete(false);
         refreshBudgets();
     };
 
@@ -281,7 +283,7 @@ export default function BudgetPage() {
             <IncomeItemDialog open={isIncomeDialogOpen} onOpenChange={setIsIncomeDialogOpen} onSave={refreshIncome} editingItem={editingIncomeItem} />
 
             {/* Budget Dialog */}
-            <Dialog
+            <Sheet
                 isOpen={isBudgetDialogOpen}
                 onClose={() => setIsBudgetDialogOpen(false)}
                 title={editingBudgetId ? '編輯類別' : '新增類別'}
@@ -364,16 +366,30 @@ export default function BudgetPage() {
                     {/* ── 操作 ─────────────────────────────────── */}
                     <div className="border-t border-border/20 pt-4 flex items-center justify-between">
                         {editingBudgetId ? (
-                            <button type="button" onClick={handleBudgetDelete}
-                                className="flex items-center gap-1.5 text-sm text-destructive/70 hover:text-destructive transition-colors">
-                                <Trash2 className="w-3.5 h-3.5" />
-                                刪除
-                            </button>
+                            confirmBudgetDelete ? (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-destructive">確定刪除？</span>
+                                    <button type="button" onClick={handleBudgetDelete}
+                                        className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors">
+                                        確定
+                                    </button>
+                                    <button type="button" onClick={() => setConfirmBudgetDelete(false)}
+                                        className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                        取消
+                                    </button>
+                                </div>
+                            ) : (
+                                <button type="button" onClick={() => setConfirmBudgetDelete(true)}
+                                    className="flex items-center gap-1.5 text-sm text-destructive/70 hover:text-destructive transition-colors">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    刪除
+                                </button>
+                            )
                         ) : <span />}
                         <Button type="submit">{editingBudgetId ? '儲存變更' : '新增類別'}</Button>
                     </div>
                 </form>
-            </Dialog>
+            </Sheet>
         </div>
     );
 }

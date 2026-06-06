@@ -68,7 +68,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from .routers import dashboard, assets, stats, goals, transactions, budgets, settings, system, integrations, income
+from .routers import dashboard, assets, stats, goals, transactions, budgets, settings, system, integrations, income, subscriptions
 
 app.include_router(dashboard.router)
 app.include_router(assets.router)
@@ -80,6 +80,7 @@ app.include_router(income.router)
 app.include_router(settings.router)
 app.include_router(system.router)
 app.include_router(integrations.router)
+app.include_router(subscriptions.router)
 
 
 @app.get("/")

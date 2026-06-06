@@ -1,6 +1,7 @@
 // Use relative path '/api' which works with Next.js Rewrites (proxy)
 // This avoids CORS and Mixed Content issues when deployed
 import { DashboardData, Asset, Transaction, BudgetCategory, IncomeItem } from './types';
+import type { Subscription, CollectionCycle, CyclePayment } from './types';
 
 const isServer = typeof window === 'undefined';
 export const API_URL = isServer
@@ -29,6 +30,7 @@ export async function apiFetch<T = unknown>(
         try { detail = (await res.text()).slice(0, 200); } catch { /* ignore */ }
         throw new Error(`API ${res.status} [${path}]${detail ? ': ' + detail : ''}`);
     }
+    if (res.status === 204 || res.headers.get('content-length') === '0') return undefined as T;
     return res.json() as Promise<T>;
 }
 
@@ -279,3 +281,63 @@ export async function fetchIntegrations() {
         throw error;
     }
 }
+
+// --- Subscription split APIs ---
+
+export const fetchSubscriptions = () =>
+    apiFetch<Subscription[]>('/subscriptions/');
+
+export const createSubscription = (data: {
+    name: string;
+    total_cost: number;
+    total_shares: number;
+    my_shares: number;
+    collection_period_months: number;
+    members: { name: string }[];
+}) => apiFetch<Subscription>('/subscriptions/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+});
+
+export const updateSubscription = (id: number, data: Partial<{
+    name: string;
+    total_cost: number;
+    total_shares: number;
+    my_shares: number;
+    collection_period_months: number;
+}>) => apiFetch<Subscription>(`/subscriptions/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+});
+
+export const deleteSubscription = (id: number) =>
+    apiFetch(`/subscriptions/${id}`, { method: 'DELETE' });
+
+export const addSubscriptionMember = (subscriptionId: number, name: string) =>
+    apiFetch(`/subscriptions/${subscriptionId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+    });
+
+export const deleteSubscriptionMember = (memberId: number) =>
+    apiFetch(`/subscriptions/members/${memberId}`, { method: 'DELETE' });
+
+export const createCollectionCycle = (subscriptionId: number, data: { cycle_start: string; note?: string }) =>
+    apiFetch<CollectionCycle>(`/subscriptions/${subscriptionId}/cycles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+
+export const deleteCollectionCycle = (cycleId: number) =>
+    apiFetch(`/subscriptions/cycles/${cycleId}`, { method: 'DELETE' });
+
+export const updateCyclePayment = (paymentId: number, data: { paid_at: string | null; note?: string }) =>
+    apiFetch<CyclePayment>(`/subscriptions/payments/${paymentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });

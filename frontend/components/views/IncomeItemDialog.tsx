@@ -1,6 +1,6 @@
 "use client";
 
-import { Dialog } from "@/components/ui/dialog";
+import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,7 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
     const [name, setName] = useState("");
     const [amount, setAmount] = useState("");
     const [loading, setLoading] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
     useEffect(() => {
         if (open && editingItem) {
@@ -58,7 +59,6 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
 
     const handleDelete = async () => {
         if (!editingItem) return;
-        if (!confirm('確定要刪除此收入項目嗎？')) return;
         try {
             setLoading(true);
             await deleteIncomeItem(editingItem.id);
@@ -72,7 +72,7 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
     };
 
     return (
-        <Dialog
+        <Sheet
             isOpen={open}
             onClose={() => onOpenChange(false)}
             title={editingItem ? '編輯收入' : '新增收入'}
@@ -98,9 +98,24 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
             </div>
             <div className="flex justify-between mt-4">
                 {editingItem ? (
-                    <Button variant="destructive" onClick={handleDelete} disabled={loading} className="px-3">
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                    confirmDelete ? (
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-destructive">確定刪除？</span>
+                            <button type="button" onClick={handleDelete} disabled={loading}
+                                className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50">
+                                {loading ? '刪除中…' : '確定'}
+                            </button>
+                            <button type="button" onClick={() => setConfirmDelete(false)}
+                                className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                取消
+                            </button>
+                        </div>
+                    ) : (
+                        <Button variant="ghost" onClick={() => setConfirmDelete(true)} disabled={loading}
+                            className="px-3 text-destructive/70 hover:text-destructive hover:bg-transparent">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    )
                 ) : <div></div>}
                 <div className="space-x-2">
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
@@ -111,6 +126,6 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
                     </Button>
                 </div>
             </div>
-        </Dialog>
+        </Sheet>
     );
 }

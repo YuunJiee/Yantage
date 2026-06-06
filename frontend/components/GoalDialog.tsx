@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog } from "@/components/ui/dialog";
+import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +40,7 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
     const [goalType, setGoalType] = useState<'NET_WORTH' | 'ASSET_ALLOCATION'>('NET_WORTH');
     const [name, setName] = useState('');
@@ -129,7 +130,6 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
     // ----- Delete -----
     const handleDelete = async () => {
         if (!initialGoal) return;
-        if (!window.confirm('確定要刪除這個目標嗎？')) return;
         setDeleting(true);
         try {
             await fetch(`${API_URL}/goals/${initialGoal.id}`, { method: 'DELETE' });
@@ -146,7 +146,7 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
     const isValid = isAllocation ? Math.abs(total - 100) <= 0.01 : !!targetAmount;
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title={initialGoal ? '更新財務目標' : '設定財務目標'}>
+        <Sheet isOpen={isOpen} onClose={onClose} title={initialGoal ? '更新財務目標' : '設定財務目標'}>
             <form onSubmit={handleSubmit} className="space-y-0">
 
                 {/* ── 目標類型 ──────────────────────────── */}
@@ -240,17 +240,31 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
                 {/* ── 操作按鈕 ───────────────────────────── */}
                 <div className="border-t border-border/20 pt-4 flex items-center justify-between">
                     {initialGoal ? (
-                        <button type="button" onClick={handleDelete} disabled={deleting}
-                            className="flex items-center gap-1.5 text-sm text-destructive/70 hover:text-destructive transition-colors disabled:opacity-50">
-                            <Trash2 className="w-3.5 h-3.5" />
-                            {deleting ? '刪除中…' : '刪除'}
-                        </button>
+                        confirmDelete ? (
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-destructive">確定刪除？</span>
+                                <button type="button" onClick={handleDelete} disabled={deleting}
+                                    className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50">
+                                    {deleting ? '刪除中…' : '確定'}
+                                </button>
+                                <button type="button" onClick={() => setConfirmDelete(false)}
+                                    className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                    取消
+                                </button>
+                            </div>
+                        ) : (
+                            <button type="button" onClick={() => setConfirmDelete(true)}
+                                className="flex items-center gap-1.5 text-sm text-destructive/70 hover:text-destructive transition-colors">
+                                <Trash2 className="w-3.5 h-3.5" />
+                                刪除
+                            </button>
+                        )
                     ) : <span />}
                     <Button type="submit" disabled={loading || !isValid}>
                         {loading ? '儲存中…' : (initialGoal ? '更新目標' : '設定目標')}
                     </Button>
                 </div>
             </form>
-        </Dialog>
+        </Sheet>
     );
 }
