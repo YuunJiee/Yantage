@@ -99,12 +99,6 @@ export interface IntegrationConnection {
     address?: string;
 }
 
-/** Single data point returned by /api/stats/asset/{id}/history */
-export interface AssetHistoryPoint {
-    date: string;
-    value: number;
-}
-
 /** A web3 wallet group combining multiple wallet addresses of the same token */
 export interface AssetGroup {
     isGroup: true;
@@ -129,15 +123,23 @@ export interface GoalForecast {
     predicted_date: string;
 }
 
-export interface MetricData {
+/** Net-worth history data point returned by /api/stats/history */
+export interface HistoryPoint {
+    date: string;
     value: number;
-    status: string;
+    breakdown?: Record<string, number>;
 }
 
-export interface RiskMetricsResponse {
-    cagr: MetricData;
-    maxDrawdown: MetricData;
-    volatility: MetricData;
+/** Ticker lookup result returned by /api/assets/lookup/{ticker} */
+export interface TickerLookupResult {
+    name?: string;
+    price?: number;
+    error?: string;
+}
+
+/** Forecast envelope returned by /api/stats/forecast */
+export interface ForecastResponse {
+    forecasts: GoalForecast[];
 }
 
 // --- Subscription split types ---

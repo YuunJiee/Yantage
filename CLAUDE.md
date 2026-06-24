@@ -58,35 +58,59 @@ backend/
 ```
 frontend/
 ├── app/
-│   ├── page.tsx              # 主頁（儀表板）
-│   ├── expenses/page.tsx     # 預算規劃（設定區）
-│   ├── history/page.tsx      # 歷史紀錄（設定區）
-│   └── settings/page.tsx     # 設定
+│   ├── page.tsx                   # 主頁（儀表板）
+│   ├── budget/page.tsx            # 預算規劃（從設定齒輪進入）
+│   ├── history/page.tsx           # 歷史紀錄（從設定齒輪進入）
+│   ├── subscriptions/page.tsx     # 訂閱分帳（從設定齒輪進入）
+│   └── settings/page.tsx          # 設定
 ├── components/
+│   ├── TopBar.tsx                 # 頂部極簡 bar（App 名稱 + 隱私 + 設定圖示）
 │   ├── ClientLayout.tsx
-│   ├── AppSidebar.tsx
-│   ├── BottomNav.tsx
-│   └── ...
+│   ├── DashboardClient.tsx
+│   ├── AddAssetDialog.tsx
+│   ├── AssetActionDialog.tsx
+│   ├── AssetAccordion.tsx
+│   ├── AssetAllocationWidget.tsx
+│   ├── GoalWidget.tsx
+│   ├── GoalDialog.tsx
+│   ├── NetWorthTrendChart.tsx
+│   ├── TopPerformersWidget.tsx
+│   ├── CategoryVisibility.tsx
+│   ├── IntegrationManager.tsx
+│   ├── IntegrationDialog.tsx
+│   ├── TransactionEditDialog.tsx
+│   ├── IconPicker.tsx
+│   ├── PrivacyProvider.tsx
+│   ├── ThemeProvider.tsx
+│   ├── views/                     # AssetActionDialog 的子 view 元件
+│   │   ├── AssetHistoryView.tsx
+│   │   ├── EditAssetView.tsx
+│   │   ├── QuickAdjustView.tsx
+│   │   └── IncomeItemDialog.tsx
+│   └── ui/                        # shadcn/radix 基礎元件
 └── lib/
     ├── hooks.ts
     ├── api.ts
-    └── types.ts
+    ├── types.ts
+    ├── constants.ts
+    ├── useTickerLookup.ts
+    ├── iconHelper.ts
+    └── utils.ts
 ```
 
 ---
 
-## Active Redesign: Minimalist Single-Page
+## Design Principles
 
-### 設計原則
 - **單一主頁面**：所有常用資訊在一個可捲動頁面
-- **零導航元件**：移除 AppSidebar 和 BottomNav
-- **次要功能收起**：設定/預算/歷史透過右上角齒輪進入
+- **零導航元件**：無 Sidebar / BottomNav，僅 TopBar
+- **次要功能收起**：設定 / 預算 / 歷史 / 訂閱透過右上角齒輪進入
 - **zh-TW only**：無多語言切換
 
 ### 主頁面結構
 ```
 ┌─────────────────────────────┐
-│  Yantage           👁  ⚙   │  ← 頂部極簡 bar
+│  Yantage           👁  ⚙   │  ← TopBar
 ├─────────────────────────────┤
 │  淨值大數字 + 月變動          │
 │  資產分佈（圓餅圖）            │
@@ -99,27 +123,10 @@ frontend/
 └─────────────────────────────┘
 ```
 
-### 待刪除的頁面
-| 頁面 | 原因 |
-|---|---|
-| `app/analytics/page.tsx` | 內容移入主頁 |
-| `app/stock/page.tsx` | 表現最佳/最差移入主頁 |
-| `app/assets/page.tsx` | 改為主頁呼出的 Sheet |
+---
 
-### 待調整的頁面
-| 頁面 | 調整方式 |
-|---|---|
-| `app/history/page.tsx` | 保留但從設定齒輪進入 |
-| `app/expenses/page.tsx` | 保留但從設定齒輪進入 |
-| `app/settings/page.tsx` | 保留但從設定齒輪進入 |
+## Known Technical Debt
 
-### 待刪除的元件
-- `components/AppSidebar.tsx`
-- `components/BottomNav.tsx`
-
-### 待新增的元件
-- `components/TopBar.tsx` — 頂部極簡 bar（App 名稱 + 隱私 + 設定圖示）
-- `components/AssetManagerSheet.tsx` — 資產管理 Sheet（取代 assets 頁面）
 
 ---
 

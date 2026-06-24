@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { Download, Trash2, History, PieChart, ChevronRight, SquareSplitHorizontal } from 'lucide-react';
 import { CategoryVisibility } from "@/components/CategoryVisibility";
-import { fetchSetting, updateSetting, fetchDashboardData, API_URL } from '@/lib/api';
+import { fetchSetting, updateSetting, fetchDashboardData, apiFetch, API_URL } from '@/lib/api';
 
 export default function SettingsPage() {
     const [budgetStartDay, setBudgetStartDay] = useState('1');
@@ -50,12 +50,8 @@ export default function SettingsPage() {
 
     const handleReset = async () => {
         try {
-            const res = await fetch(`${API_URL}/system/reset`, { method: 'DELETE' });
-            if (res.ok) {
-                window.location.href = '/';
-            } else {
-                setResetStep(0);
-            }
+            await apiFetch('/system/reset', { method: 'DELETE' });
+            window.location.href = '/';
         } catch (e) {
             console.error(e);
             setResetStep(0);
@@ -74,7 +70,7 @@ export default function SettingsPage() {
             <section className="space-y-2">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">頁面</h2>
                 <div className="rounded-2xl border border-border bg-card divide-y divide-border/50 overflow-hidden">
-                    <Link href="/expenses" className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors">
+                    <Link href="/budget" className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors">
                         <div className="flex items-center gap-3">
                             <PieChart className="w-4 h-4 text-muted-foreground" />
                             <span className="text-sm font-medium">預算規劃</span>

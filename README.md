@@ -1,6 +1,6 @@
 # Yantage — 個人資產儀表板
 
-自架的個人財務儀表板。以單一可捲動頁面追蹤各類資產淨值，連接交易所與鏈上錢包，所有資料存於本機 SQLite，無雲端依賴。
+自架的個人財務儀表板。單一可捲動頁面追蹤各類資產淨值，連接交易所與鏈上錢包，資料存於本機 SQLite，無雲端依賴。
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
@@ -9,24 +9,19 @@
 ## 功能
 
 - **6 大資產類別**：流動資產、股票、加密貨幣、固定資產、應收帳款、負債
-- **即時報價**：台股 / 美股透過 Yahoo Finance，加密貨幣透過 Binance CCXT
-- **交易所同步**：MAX、Binance、Pionex — 以唯讀 API Key 自動同步餘額
-- **鏈上錢包**：Ethereum、Scroll、BSC、Arbitrum — 直接 RPC，無第三方 API
+- **即時報價**：台股 / 美股（Yahoo Finance）、加密貨幣（Binance CCXT）
+- **交易所同步**：MAX、Binance、Pionex — 唯讀 API Key 自動同步餘額
+- **鏈上錢包**：Ethereum / Scroll / BSC / Arbitrum — 直接 RPC，無第三方 API
 - **淨值趨勢圖**：可選時間區間（30天 / 3個月 / 6個月 / 1年 / 全部）
-- **月結快照**：歷史頁面切換「月結快照」tab，逐月淨值與漲跌一覽
+- **月結快照**：逐月淨值與漲跌一覽
 - **目標追蹤**：FIRE 淨值目標（含預測達成日）、資產配置目標
 - **預算規劃**：月度類別預算、收入追蹤、投資比率警示
-- **手動重整**：頂部 ↻ 按鈕一鍵觸發報價更新 + 當日快照
 - **隱私模式**：一鍵遮蔽全站數字
-- **PWA 支援**：可安裝至手機或桌面主畫面，全螢幕獨立視窗
-- **介面語言**：繁體中文（zh-TW）
-- **Morandi 主題**：溫暖米白底色，極簡紙質感設計
+- **PWA**：可安裝至手機或桌面主畫面
 
 ---
 
 ## 快速啟動（Docker）
-
-**前置需求：** Docker with Compose plugin（Docker Desktop 或 Engine 20.10+）
 
 ```bash
 git clone https://github.com/YuunJiee/Personal-Asset-Dash.git
@@ -34,8 +29,8 @@ cd Personal-Asset-Dash
 docker compose up --build
 ```
 
-- **儀表板** → http://localhost:3001
-- **API 文件** → http://localhost:8000/docs
+- 儀表板 → http://localhost:3001
+- API 文件 → http://localhost:8000/docs
 
 資料存於 `yantage_data` named volume，重建容器不會遺失。
 
@@ -43,32 +38,21 @@ docker compose up --build
 |---|---|
 | `docker compose up -d` | 背景啟動 |
 | `docker compose down` | 停止 |
-| `docker compose down -v` | 停止並 **清除資料** ⚠️ |
+| `docker compose down -v` | 停止並**清除資料** ⚠️ |
 | `docker compose logs -f` | 即時查看 log |
-
-**匯入現有資料：**
-```bash
-docker run --rm -v yantage_data:/data -v "$(pwd)/backend":/src alpine \
-  sh -c "cp /src/sql_app*.db /data/ 2>/dev/null; echo done"
-```
 
 ---
 
-## 開發環境（不用 Docker）
-
-**前置需求：** Python 3.8+、Node.js 18+
+## 開發環境
 
 ```bash
-# 後端
-cd backend
-pip install -r requirements.txt
+# 後端（Python 3.8+）
+cd backend && pip install -r requirements.txt
 cp .env.example .env
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
-# 前端（另開終端機）
-cd frontend
-npm install
-npm run dev
+# 前端（Node.js 18+）
+cd frontend && npm install && npm run dev
 ```
 
 ---
@@ -77,21 +61,9 @@ npm run dev
 
 | 變數 | 預設值 | 說明 |
 |---|---|---|
-| `ALLOWED_ORIGINS` | `http://localhost:3000` | CORS 允許來源（逗號分隔） |
+| `ALLOWED_ORIGINS` | `http://localhost:3000` | CORS 允許來源 |
 | `LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
 | `YANTAGE_DATA_DIR` | *(backend 目錄)* | SQLite DB 存放路徑 |
-
-Docker 部署時在 `docker-compose.yml` 設定；本機開發從 `backend/.env.example` 複製為 `backend/.env`。
-
----
-
-## 部署架構（Nginx + Cloudflare Tunnel）
-
-```
-Internet → Cloudflare Tunnel (TLS) → Nginx
-              ├── /       → Next.js  :3001
-              └── /api    → FastAPI  :8000
-```
 
 ---
 
@@ -106,6 +78,4 @@ Internet → Cloudflare Tunnel (TLS) → Nginx
 
 ---
 
-## License
-
-MIT — 自由使用、修改、散佈。
+MIT License

@@ -21,14 +21,9 @@ import {
     fetchSetting,
     API_URL,
 } from './api';
-import type { DashboardData, BudgetCategory, IncomeItem } from './types';
+import type { DashboardData, BudgetCategory, IncomeItem, HistoryPoint } from './types';
 
-// ── Shared history data point type ───────────────────────────────────────────
-export interface HistoryPoint {
-    date: string;
-    value: number;
-    breakdown?: Record<string, number>;
-}
+export type { HistoryPoint };
 
 // ── SWR key factories (stable strings used as cache keys) ────────────────────
 export const SWR_KEYS = {

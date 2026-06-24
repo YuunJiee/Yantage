@@ -6,12 +6,29 @@ import { Input } from "@/components/ui/input";
 import { MoneyInput } from '@/components/ui/MoneyInput';
 import { CustomSelect } from "@/components/ui/custom-select";
 import { cn } from '@/lib/utils';
-import { createAsset, createTransaction, lookupTicker, fetchIntegrations } from '@/lib/api';
+import { createAsset, createTransaction, fetchIntegrations } from '@/lib/api';
+import { useTickerLookup } from '@/lib/useTickerLookup';
 import type { IntegrationConnection } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { IconPicker, getDefaultIcon } from './IconPicker';
 
+const SUB_CATEGORIES: Record<string, string[]> = {
+    'Fluid': ['Cash', 'E-Wallet', 'Debit Card', 'Other'],
+    'Crypto': ['Coin', 'Token', 'Stablecoin', 'DeFi', 'NFT'],
+    'Stock': ['TW Stock', 'US Stock', 'ETF', 'Bond', 'Mutual Fund', 'Other Investment'],
+    'Fixed': ['Real Estate', 'Car', 'Other Fixed Asset'],
+    'Receivables': [],
+    'Liabilities': ['Credit Card', 'Loan', 'Payable', 'Other Liability'],
+};
 
+const SUB_CATEGORY_LABELS: Record<string, string> = {
+    'Cash': '現金', 'E-Wallet': '電子錢包', 'Debit Card': '簽帳金融卡', 'Other': '其他',
+    'Coin': '幣', 'Token': '代幣', 'Stablecoin': '穩定幣', 'DeFi': 'DeFi', 'NFT': 'NFT',
+    'TW Stock': '台股', 'US Stock': '美股', 'Mutual Fund': '共同基金', 'Fund': '基金',
+    'Stock': '股票', 'Crypto': '加密貨幣', 'Other Investment': '其他投資',
+    'Real Estate': '房地產', 'Car': '車輛', 'Other Fixed Asset': '其他固定資產',
+    'Credit Card': '信用卡', 'Loan': '貸款', 'Payable': '應付帳款', 'Other Liability': '其他負債',
+};
 
 interface AddAssetDialogProps {
     isOpen: boolean;
@@ -35,8 +52,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
         manualAvgCost: '',
         paymentDueDay: ''
     });
-    const [market, setMarket] = useState('TW'); // Default to Taiwan market
-    const [fetchedPrice, setFetchedPrice] = useState<number | null>(null);
+    const [market, setMarket] = useState('TW');
 
     // Web3 / Wallet State
     const [source, setSource] = useState('manual'); // manual, wallet
@@ -55,24 +71,13 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
         { value: 'Liabilities', label: '負債' },
     ];
 
-    const subCategories: Record<string, string[]> = {
-        'Fluid': ['Cash', 'E-Wallet', 'Debit Card', 'Other'],
-        'Crypto': ['Coin', 'Token', 'Stablecoin', 'DeFi', 'NFT'],
-        'Stock': ['TW Stock', 'US Stock', 'ETF', 'Bond', 'Mutual Fund', 'Other Investment'],
-        'Fixed': ['Real Estate', 'Car', 'Other Fixed Asset'],
-        'Receivables': [],
-        'Liabilities': ['Credit Card', 'Loan', 'Payable', 'Other Liability']
-    };
-
-    const getSubCategoryLabel = (key: string) => ({
-        'Cash': '現金', 'E-Wallet': '電子錢包', 'Debit Card': '簽帳金融卡', 'Other': '其他',
-        'Coin': '幣', 'Token': '代幣', 'Stablecoin': '穩定幣', 'DeFi': 'DeFi', 'NFT': 'NFT',
-        'TW Stock': '台股', 'US Stock': '美股', 'Mutual Fund': '共同基金', 'Fund': '基金',
-        'Stock': '股票', 'Crypto': '加密貨幣', 'Other Investment': '其他投資',
-        'Real Estate': '房地產', 'Car': '車輛', 'Other Fixed Asset': '其他固定資產',
-        'Credit Card': '信用卡', 'Loan': '貸款', 'Payable': '應付帳款', 'Other Liability': '其他負債'
-    } as Record<string,string>)[key] ?? key;
-
+    const { fetchedPrice, clearPrice } = useTickerLookup(
+        formData.ticker,
+        formData.category,
+        market,
+        (name) => setFormData(prev => ({ ...prev, name: prev.name || name })),
+        (price) => setFormData(prev => ({ ...prev, manualAvgCost: prev.manualAvgCost || price.toString() })),
+    );
 
     // Reset form and sync category when dialog opens
     useEffect(() => {
@@ -81,7 +86,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                 name: '',
                 ticker: '',
                 category: defaultCategory || 'Fluid',
-                subCategory: subCategories[defaultCategory || 'Fluid']?.[0] || '',
+                subCategory: SUB_CATEGORIES[defaultCategory || 'Fluid']?.[0] || '',
                 initialBalance: '',
                 includeInNetWorth: true,
                 icon: '',
@@ -89,7 +94,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                 paymentDueDay: ''
             });
             setMarket('TW');
-            setFetchedPrice(null);
+            clearPrice();
 
             // Web3 Reset
             setSource('manual');
@@ -103,62 +108,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                 setConnections((data as IntegrationConnection[]).filter((c) => c.provider === 'wallet'));
             }).catch(console.error);
         }
-    // subCategories is module-level const — stable, no need in deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, defaultCategory]);
-
-    // Auto-fetch ticker info when ticker is entered for stocks/crypto
-    useEffect(() => {
-        const fetchTickerInfo = async () => {
-            if (!formData.ticker || formData.ticker.trim().length < 2) return;
-            // Only Stock and Crypto have tickers
-            if (formData.category !== 'Stock' && formData.category !== 'Crypto') return;
-
-            try {
-                let tickerToLookup = formData.ticker;
-
-                // Add market suffix for Taiwan stocks
-                if (formData.category === 'Stock' && market === 'TW') {
-                    if (!tickerToLookup.endsWith('.TW')) {
-                        tickerToLookup = `${tickerToLookup}.TW`;
-                    }
-                }
-
-                // Add -USD for crypto
-                if (formData.category === 'Crypto' && !tickerToLookup.includes('-')) {
-                    tickerToLookup = `${tickerToLookup}-USD`;
-                }
-
-                const result = await lookupTicker(tickerToLookup);
-
-                if (result.name && !result.error) {
-                    // Auto-fill name if it's empty
-                    setFormData(prev => ({
-                        ...prev,
-                        name: prev.name || result.name
-                    }));
-                }
-
-                if (result.price) {
-                    setFetchedPrice(result.price);
-                    // Set manual avg cost default to fetched price if not already set
-                    setFormData(prev => ({
-                        ...prev,
-                        manualAvgCost: result.price ? result.price.toString() : prev.manualAvgCost
-                    }));
-                } else {
-                    setFetchedPrice(null);
-                }
-            } catch (error) {
-                console.error('Failed to lookup ticker:', error);
-                setFetchedPrice(null);
-            }
-        };
-
-        // Debounce the API call
-        const timeoutId = setTimeout(fetchTickerInfo, 500);
-        return () => clearTimeout(timeoutId);
-    }, [formData.ticker, formData.category, formData.subCategory, market]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -291,7 +241,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                     <div className="grid grid-cols-2 gap-3">
                         <CustomSelect
                             value={formData.category}
-                            onChange={(val) => setFormData({ ...formData, category: val, subCategory: subCategories[val]?.[0] || '' })}
+                            onChange={(val) => setFormData({ ...formData, category: val, subCategory: SUB_CATEGORIES[val]?.[0] || '' })}
                             options={categories}
                         />
                         {formData.category !== 'Receivables' && (
@@ -302,7 +252,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                                     if (val === 'TW Stock') setMarket('TW');
                                     if (val === 'US Stock' || val === 'Mutual Fund') setMarket('US');
                                 }}
-                                options={(subCategories[formData.category] || []).map(sub => ({ value: sub, label: getSubCategoryLabel(sub) }))}
+                                options={(SUB_CATEGORIES[formData.category] || []).map(sub => ({ value: sub, label: SUB_CATEGORY_LABELS[sub] ?? sub }))}
                             />
                         )}
                     </div>
@@ -378,7 +328,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                             <div className="relative">
                                 <Input
                                     value={formData.ticker}
-                                    onChange={(e) => { setFormData({ ...formData, ticker: e.target.value }); if (!e.target.value) setFetchedPrice(null); }}
+                                    onChange={(e) => setFormData({ ...formData, ticker: e.target.value })}
                                     onBlur={handleTickerBlur}
                                     placeholder={market === 'TW' ? '例如：2330' : '例如：AAPL'}
                                     className="pr-28 font-mono uppercase"

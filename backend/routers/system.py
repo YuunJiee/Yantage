@@ -8,7 +8,6 @@ import io
 import os
 from .. import database
 from ..repositories.asset_repo import AssetRepository
-from ..services.providers import PROVIDERS
 from ..services.price_service import update_prices
 from ..services.snapshot_service import snapshot_net_worth
 
@@ -69,21 +68,6 @@ def reset_database(db: Session = Depends(database.get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/sync/max")
-def trigger_max_sync(db: Session = Depends(database.get_db)):
-    success = PROVIDERS["max"].sync(db)
-    return {"message": "MAX assets synced successfully" if success else "Sync attempted (Check logs or API keys)"}
-
-@router.post("/sync/pionex")
-def trigger_pionex_sync(db: Session = Depends(database.get_db)):
-    success = PROVIDERS["pionex"].sync(db)
-    return {"message": "Pionex assets synced successfully" if success else "Sync attempted (Check active connections)"}
-
-@router.post("/sync/wallet")
-def trigger_wallet_sync(db: Session = Depends(database.get_db)):
-    success = PROVIDERS["wallet"].sync(db)
-    return {"message": "Wallet assets synced successfully" if success else "Sync attempted (Check logs or API keys)"}
 
 @router.post("/refresh")
 def refresh_prices(db: Session = Depends(database.get_db)):

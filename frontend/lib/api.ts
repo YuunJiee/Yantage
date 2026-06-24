@@ -1,23 +1,15 @@
 // Use relative path '/api' which works with Next.js Rewrites (proxy)
 // This avoids CORS and Mixed Content issues when deployed
-import { DashboardData, Asset, Transaction, BudgetCategory, IncomeItem } from './types';
-import type { Subscription, CollectionCycle, CyclePayment } from './types';
+import type { DashboardData, Asset, Transaction, BudgetCategory, IncomeItem, Goal, ForecastResponse, HistoryPoint, TickerLookupResult, Subscription, CollectionCycle, CyclePayment } from './types';
 
 const isServer = typeof window === 'undefined';
 export const API_URL = isServer
-    ? (process.env.INTERNAL_API_URL || "http://127.0.0.1:8000/api") // Server-side: Direct to backend
-    : "/api"; // Client-side: Relative path (proxied by Next.js)
+    ? (process.env.INTERNAL_API_URL || "http://127.0.0.1:8000/api")
+    : "/api";
 
 /**
- * Unified fetch wrapper used by all API helpers below.
- *
- * Benefits over raw fetch:
- *  - Richer error messages: includes HTTP status, path, and up to 200 chars
- *    of the response body — much easier to debug than "HTTP error! status: 422".
- *  - Single place to add auth headers, logging, or retries in the future.
- *
- * @example
- *   const data = await apiFetch<Asset[]>('/assets/');
+ * Unified fetch wrapper. Throws on non-2xx with status + path + body fragment.
+ * Single place to add auth headers, logging, or retries in the future.
  */
 export async function apiFetch<T = unknown>(
     path: string,
@@ -34,151 +26,46 @@ export async function apiFetch<T = unknown>(
     return res.json() as Promise<T>;
 }
 
-export async function fetchDashboardData(): Promise<DashboardData> {
-    try {
-        const url = `${API_URL}/dashboard/`;
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        return await res.json();
-    } catch (error) {
-        console.error("fetchDashboardData failed:", error);
-        throw error;
-    }
-}
+const json = (body: unknown): RequestInit => ({
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+});
 
-export async function fetchAssets(): Promise<Asset[]> {
-    try {
-        const res = await fetch(`${API_URL}/assets/`, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return await res.json();
-    } catch (error) {
-        console.error("fetchAssets failed:", error);
-        throw error;
-    }
-}
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+export const fetchDashboardData = () => apiFetch<DashboardData>('/dashboard/');
 
-export async function fetchSetting(key: string) {
-    try {
-        const res = await fetch(`${API_URL}/settings/${key}`, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return await res.json();
-    } catch (error) {
-        console.error(`fetchSetting failed for ${key}:`, error);
-        throw error;
-    }
-}
+// ── Settings ──────────────────────────────────────────────────────────────────
+export const fetchSetting = (key: string) =>
+    apiFetch<{ key: string; value: string }>(`/settings/${key}`);
 
-export async function updateSetting(key: string, value: string) {
-    try {
-        const res = await fetch(`${API_URL}/settings/${key}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key, value })
-        });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return await res.json();
-    } catch (error) {
-        console.error(`updateSetting failed for ${key}:`, error);
-        throw error;
-    }
-}
+export const updateSetting = (key: string, value: string) =>
+    apiFetch(`/settings/${key}`, { method: 'PUT', ...json({ key, value }) });
 
-export async function fetchRebalanceData() {
-    try {
-        const res = await fetch(`${API_URL}/stats/rebalance`, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return await res.json();
-    } catch (error) {
-        console.error("fetchRebalanceData failed:", error);
-        throw error;
-    }
-}
+// ── Stats ─────────────────────────────────────────────────────────────────────
+export const fetchHistory = (range = '1y') =>
+    apiFetch<HistoryPoint[]>(`/stats/history?range=${range}`);
 
-export async function fetchHistory(range: string = '1y') {
-    try {
-        const res = await fetch(`${API_URL}/stats/history?range=${range}`, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return await res.json();
-    } catch (error) {
-        console.error("fetchHistory failed:", error);
-        throw error;
-    }
-}
+export const fetchGoals = () => apiFetch<Goal[]>('/goals/');
+export const fetchForecast = () => apiFetch<ForecastResponse>('/stats/forecast');
 
-export async function fetchGoals() {
-    try {
-        const res = await fetch(`${API_URL}/goals/`, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return await res.json();
-    } catch (error) {
-        console.error("fetchGoals failed:", error);
-        throw error;
-    }
-}
+// ── Budget ────────────────────────────────────────────────────────────────────
+export const fetchBudgetCategories = () =>
+    apiFetch<BudgetCategory[]>('/budgets/categories');
 
-export async function fetchForecast() {
-    try {
-        const res = await fetch(`${API_URL}/stats/forecast`, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return await res.json();
-    } catch (error) {
-        console.error("fetchForecast failed:", error);
-        throw error;
-    }
-}
+// ── Income ────────────────────────────────────────────────────────────────────
+export const fetchIncomeItems = () => apiFetch<IncomeItem[]>('/income/items');
 
-export async function fetchBudgetCategories(): Promise<BudgetCategory[]> {
-    try {
-        const res = await fetch(`${API_URL}/budgets/categories`, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return await res.json();
-    } catch (error) {
-        console.error("fetchBudgetCategories failed:", error);
-        throw error;
-    }
-}
+export const createIncomeItem = (data: { name: string; amount: number }) =>
+    apiFetch('/income/items', { method: 'POST', ...json(data) });
 
-// --- Income API ---
-export async function fetchIncomeItems(): Promise<IncomeItem[]> {
-    try {
-        const res = await fetch(`${API_URL}/income/items`, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return await res.json();
-    } catch (error) {
-        console.error("fetchIncomeItems failed:", error);
-        throw error;
-    }
-}
+export const updateIncomeItem = (id: number, data: { name?: string; amount?: number }) =>
+    apiFetch(`/income/items/${id}`, { method: 'PUT', ...json(data) });
 
-export async function createIncomeItem(data: { name: string; amount: number }) {
-    const res = await fetch(`${API_URL}/income/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
-    if (!res.ok) throw new Error("Failed to create income item");
-    return res.json();
-}
+export const deleteIncomeItem = (id: number) =>
+    apiFetch(`/income/items/${id}`, { method: 'DELETE' });
 
-export async function updateIncomeItem(id: number, data: { name?: string; amount?: number }) {
-    const res = await fetch(`${API_URL}/income/items/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
-    if (!res.ok) throw new Error("Failed to update income item");
-    return res.json();
-}
-
-export async function deleteIncomeItem(id: number) {
-    const res = await fetch(`${API_URL}/income/items/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error("Failed to delete income item");
-    return true;
-}
-
-export async function createAsset(assetData: {
+// ── Assets ────────────────────────────────────────────────────────────────────
+export function createAsset(assetData: {
     name: string;
     ticker: string | null;
     category: string;
@@ -188,104 +75,39 @@ export async function createAsset(assetData: {
     tags?: { name: string }[];
     current_price?: number | null;
     payment_due_day?: number | null;
-    // Web3 Fields
     source?: string;
     network?: string;
     contract_address?: string;
     decimals?: number;
     connection_id?: number | null;
 }) {
-    const res = await fetch(`${API_URL}/assets/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(assetData)
-    });
-    if (!res.ok) throw new Error('Failed to create asset');
-    return res.json();
+    return apiFetch<Asset>('/assets/', { method: 'POST', ...json(assetData) });
 }
 
-export async function createTransaction(assetId: number, transactionData: Omit<Transaction, 'id' | 'asset_id'>): Promise<Transaction> {
-    const res = await fetch(`${API_URL}/assets/${assetId}/transactions/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transactionData),
-    });
-    if (!res.ok) throw new Error('Failed to create transaction');
-    return res.json();
-}
+export const updateAsset = (assetId: number, assetData: Partial<Omit<Asset, 'id'>>) =>
+    apiFetch<Asset>(`/assets/${assetId}`, { method: 'PUT', ...json(assetData) });
 
-export async function deleteAsset(assetId: number) {
-    const res = await fetch(`${API_URL}/assets/${assetId}`, {
-        method: 'DELETE',
-    });
-    if (!res.ok) throw new Error('Failed to delete asset');
-}
+export const deleteAsset = (assetId: number) =>
+    apiFetch(`/assets/${assetId}`, { method: 'DELETE' });
 
-export async function updateAsset(assetId: number, assetData: Partial<Omit<Asset, 'id'>>): Promise<Asset> {
-    const res = await fetch(`${API_URL}/assets/${assetId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(assetData),
-    });
-    if (!res.ok) throw new Error('Failed to update asset');
-    return res.json();
-}
+export const lookupTicker = (ticker: string) =>
+    apiFetch<TickerLookupResult>(`/assets/lookup/${encodeURIComponent(ticker)}`);
 
-export async function lookupTicker(ticker: string) {
-    const res = await fetch(`${API_URL}/assets/lookup/${encodeURIComponent(ticker)}`);
-    if (!res.ok) throw new Error('Failed to lookup ticker');
-    return res.json();
-}
+// ── Transactions ──────────────────────────────────────────────────────────────
+export const createTransaction = (assetId: number, transactionData: Omit<Transaction, 'id' | 'asset_id'>) =>
+    apiFetch<Transaction>(`/assets/${assetId}/transactions/`, { method: 'POST', ...json(transactionData) });
 
-export async function transferFunds(data: { from_asset_id: number; to_asset_id: number; amount: number; fee?: number; date?: string }) {
-    const res = await fetch(`${API_URL}/transactions/transfer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Transfer failed');
-    }
-    return res.json();
-}
+export const updateTransaction = (id: number, data: Partial<Omit<Transaction, 'id'>>) =>
+    apiFetch<Transaction>(`/assets/transactions/${id}`, { method: 'PUT', ...json(data) });
 
-// Update Transaction
-export async function updateTransaction(id: number, data: Partial<Omit<Transaction, 'id'>>): Promise<Transaction> {
-    const res = await fetch(`${API_URL}/assets/transactions/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail || 'Failed to update transaction');
-    }
-    return res.json();
-}
+export const deleteTransaction = (id: number) =>
+    apiFetch(`/assets/transactions/${id}`, { method: 'DELETE' });
 
-export async function deleteTransaction(id: number) {
-    const res = await fetch(`${API_URL}/assets/transactions/${id}`, {
-        method: 'DELETE',
-    });
-    if (!res.ok) throw new Error('Failed to delete transaction');
-}
+// ── Integrations ──────────────────────────────────────────────────────────────
+export const fetchIntegrations = () => apiFetch('/integrations/');
 
-export async function fetchIntegrations() {
-    try {
-        const res = await fetch(`${API_URL}/integrations/`, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return await res.json();
-    } catch (error) {
-        console.error("fetchIntegrations failed:", error);
-        throw error;
-    }
-}
-
-// --- Subscription split APIs ---
-
-export const fetchSubscriptions = () =>
-    apiFetch<Subscription[]>('/subscriptions/');
+// ── Subscriptions ─────────────────────────────────────────────────────────────
+export const fetchSubscriptions = () => apiFetch<Subscription[]>('/subscriptions/');
 
 export const createSubscription = (data: {
     name: string;
@@ -294,11 +116,7 @@ export const createSubscription = (data: {
     my_shares: number;
     collection_period_months: number;
     members: { name: string }[];
-}) => apiFetch<Subscription>('/subscriptions/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-});
+}) => apiFetch<Subscription>('/subscriptions/', { method: 'POST', ...json(data) });
 
 export const updateSubscription = (id: number, data: Partial<{
     name: string;
@@ -306,38 +124,22 @@ export const updateSubscription = (id: number, data: Partial<{
     total_shares: number;
     my_shares: number;
     collection_period_months: number;
-}>) => apiFetch<Subscription>(`/subscriptions/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-});
+}>) => apiFetch<Subscription>(`/subscriptions/${id}`, { method: 'PUT', ...json(data) });
 
 export const deleteSubscription = (id: number) =>
     apiFetch(`/subscriptions/${id}`, { method: 'DELETE' });
 
 export const addSubscriptionMember = (subscriptionId: number, name: string) =>
-    apiFetch(`/subscriptions/${subscriptionId}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-    });
+    apiFetch(`/subscriptions/${subscriptionId}/members`, { method: 'POST', ...json({ name }) });
 
 export const deleteSubscriptionMember = (memberId: number) =>
     apiFetch(`/subscriptions/members/${memberId}`, { method: 'DELETE' });
 
 export const createCollectionCycle = (subscriptionId: number, data: { cycle_start: string; note?: string }) =>
-    apiFetch<CollectionCycle>(`/subscriptions/${subscriptionId}/cycles`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-    });
+    apiFetch<CollectionCycle>(`/subscriptions/${subscriptionId}/cycles`, { method: 'POST', ...json(data) });
 
 export const deleteCollectionCycle = (cycleId: number) =>
     apiFetch(`/subscriptions/cycles/${cycleId}`, { method: 'DELETE' });
 
 export const updateCyclePayment = (paymentId: number, data: { paid_at: string | null; note?: string }) =>
-    apiFetch<CyclePayment>(`/subscriptions/payments/${paymentId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-    });
+    apiFetch<CyclePayment>(`/subscriptions/payments/${paymentId}`, { method: 'PATCH', ...json(data) });
