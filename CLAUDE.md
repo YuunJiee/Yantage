@@ -54,7 +54,6 @@ backend/
 │   ├── dashboard.py
 │   ├── stats.py
 │   ├── goals.py
-│   ├── transactions.py
 │   ├── budgets.py
 │   ├── income.py
 │   ├── settings.py
@@ -66,7 +65,6 @@ backend/
     ├── icons.py
     ├── math.py
     ├── secrets.py             # API-key / settings-value masking
-    ├── db_path.py             # sqlite:/// URL → filesystem path
     └── hmac_signing.py        # MAX / Pionex request signing
 ```
 
@@ -166,10 +164,8 @@ frontend/
 
 ## Known Technical Debt
 
-- **`wallet.py` 的兩個同步迴圈沒有收斂進 `sync_asset_balance()`**：已知代幣更新（只更新既有 asset，不建立新的）跟自動發現新代幣（只建立，不更新）跟 binance/pionex 的「找或建 + 補差額交易」形狀不同，硬套共用函式會犧牲可讀性，所以維持各自實作。
-- **`AssetAccordion.tsx` 的一般資產列跟 web3 群組列沒有合併成單一元件**：兩者只共用圖示區塊（`AssetRowIcon`）跟金額計算（`getAssetDisplayValue`），版面本身（金額+百分比垂直堆疊 vs 金額+展開箭頭水平排列）差異夠大，強行合併會需要一堆條件 prop，判斷不值得。
-- **`.env.example` 有兩份且內容跟程式碼實際讀取的環境變數對不上**：根目錄跟 `backend/.env.example` 內容不同，且兩者都列了一些程式碼從未讀取的變數（如 `DATABASE_URL`、`PRICE_UPDATE_INTERVAL`）。實際會讀的只有 `YANTAGE_DATA_DIR`、`ALLOWED_ORIGINS`、`LOG_LEVEL`（見 `database.py`/`main.py`）。這次重構只修正了 README 裡壞掉的啟動指令，沒有動 `.env.example` 本身。
-- **`lib/types.ts` 的 `IntegrationConnection`（`label` 欄位）跟後端 `ConnectionResponse` 實際回傳的形狀（`name` 欄位）對不上**：`AddAssetDialog.tsx` 用這個型別顯示錢包連線下拉選單時，`c.label` 永遠是 `undefined`，導致一律 fallback 顯示「連接 {id}」而不是真正的連線名稱。這是既有 bug，這次重構過程中順帶發現，但不在核心「維護性重構」範圍內，先記錄下來。
+- **`wallet.py` 的「已知代幣更新」跟「自動發現新代幣」兩個迴圈刻意不跟 binance/pionex 共用 `sync_asset_balance()`**：兩者共用的部分（ERC20 `balanceOf()` 呼叫 + 依 decimals 換算）已抽成 `_fetch_erc20_balance()`；但一個只更新既有 asset、另一個只建立新 asset 並設定 name/icon/price，若硬塞進同一個「找或建」函式，會導致自動發現的代幣被使用者手動改名後，下次同步又被覆蓋回去——這是刻意保留的行為差異，不是沒發現的重複。
+- **`AssetAccordion.tsx` 的一般資產列跟 web3 群組列沒有合併成單一元件**：兩者共用圖示區塊（`AssetRowIcon`）跟金額計算（`getAssetDisplayValue`），但版面本身（金額+百分比垂直堆疊 vs 金額+展開箭頭水平排列，還有 badge/meta 內容都不同）差異夠大，強行合併會需要一堆條件 prop，判斷不值得，重新評估後維持現狀。
 - **通用化 / 多使用者 / i18n**：目前仍是刻意的個人自架單頁工具（zh-TW only、無登入、強制 light mode）。若之後要開放給別人用，需要另外規劃，不是這次重構的目標。
 
 ---

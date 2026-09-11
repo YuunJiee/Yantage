@@ -1,22 +1,14 @@
 import csv
 import io
-import os
 
 from sqlalchemy.orm import Session
 
-from .. import database
 from ..repositories.asset_repo import AssetRepository
 from ..repositories.system_repo import SystemRepository
-from ..utils.db_path import sqlite_path_from_url
 from .price_service import update_prices
 from .snapshot_service import snapshot_net_worth
 
 CSV_HEADER = ['ID', 'Name', 'Ticker', 'Category', 'Sub-Category', 'Source', 'Quantity', 'Current Price', 'Value (approx)', 'Include in NW']
-
-
-def get_backup_file_path() -> str | None:
-    db_path = sqlite_path_from_url(database.DATABASE_URL)
-    return db_path if os.path.exists(db_path) else None
 
 
 def build_assets_csv(db: Session) -> str:

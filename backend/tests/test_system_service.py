@@ -3,11 +3,6 @@ from datetime import datetime
 from backend import models, schemas
 from backend.repositories.asset_repo import AssetRepository
 from backend.services import system_service
-from backend.utils.db_path import sqlite_path_from_url
-
-
-def test_sqlite_path_from_url_strips_prefix():
-    assert sqlite_path_from_url("sqlite:////data/sql_app.db") == "/data/sql_app.db"
 
 
 def test_wipe_all_data_empties_tables_and_reseeds_budget_start_day(db):

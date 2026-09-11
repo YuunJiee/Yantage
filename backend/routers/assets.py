@@ -39,14 +39,6 @@ def lookup_ticker(ticker: str):
     return ticker_lookup_service.lookup_ticker(ticker)
 
 
-@router.get("/{asset_id}", response_model=schemas.Asset)
-def read_asset(asset_id: int, db: Session = Depends(database.get_db)):
-    db_asset = AssetService(db).get(asset_id)
-    if db_asset is None:
-        raise HTTPException(status_code=404, detail="Asset not found")
-    return db_asset
-
-
 @router.post("/{asset_id}/transactions/", response_model=schemas.Transaction)
 def create_transaction_for_asset(
     asset_id: int, transaction: schemas.TransactionCreate, db: Session = Depends(database.get_db)

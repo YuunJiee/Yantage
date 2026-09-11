@@ -17,6 +17,21 @@ logger = logging.getLogger(__name__)
 _BALANCE_EPSILON = 1e-6
 
 
+def _fetch_erc20_balance(w3: Web3, contract_address: str, wallet_address: str, decimals: int) -> float:
+    """Read an ERC20 token's balance for wallet_address, scaled by decimals.
+
+    Shared by the "known token" update loop and the "auto-discovery" loop in
+    WalletProvider.sync() below — both need the same on-chain balanceOf()
+    call. They aren't merged any further than this: one only ever updates an
+    existing asset, the other only ever creates a new one (and sets its
+    name/icon/price, which the update loop deliberately never overwrites so
+    a user's manual rename of a discovered token survives future syncs).
+    """
+    contract = w3.eth.contract(address=Web3.to_checksum_address(contract_address), abi=ERC20_ABI)
+    bal = contract.functions.balanceOf(wallet_address).call()
+    return float(bal) / (10 ** decimals)
+
+
 class WalletProvider(ExchangeProvider):
     def sync(self, db: Session) -> bool:
         logger.info("Starting Wallet Sync (Multi-Connection)...")
@@ -86,11 +101,7 @@ class WalletProvider(ExchangeProvider):
 
                 for asset in token_assets:
                     try:
-                        contract = w3.eth.contract(
-                            address=Web3.to_checksum_address(asset.contract_address), abi=ERC20_ABI
-                        )
-                        bal = contract.functions.balanceOf(checksum_address).call()
-                        bal_fmt = float(bal) / (10 ** (asset.decimals or 18))
+                        bal_fmt = _fetch_erc20_balance(w3, asset.contract_address, checksum_address, asset.decimals or 18)
                         repo.record_balance_diff(
                             asset, bal_fmt, epsilon=_BALANCE_EPSILON, touch_last_updated_on_write=True
                         )
@@ -104,14 +115,8 @@ class WalletProvider(ExchangeProvider):
                             continue
                         time.sleep(0.1)
                         try:
-                            contract = w3.eth.contract(
-                                address=Web3.to_checksum_address(token['address']), abi=ERC20_ABI
-                            )
-                            bal = contract.functions.balanceOf(checksum_address).call()
-                            if bal <= 0:
-                                continue
                             decimals = token.get('decimals', 18)
-                            bal_fmt = float(bal) / (10 ** decimals)
+                            bal_fmt = _fetch_erc20_balance(w3, token['address'], checksum_address, decimals)
                             if bal_fmt <= 0:
                                 continue
 

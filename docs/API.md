@@ -13,7 +13,6 @@ The core resource: things with a value that roll up into net worth.
 | Method | Path | Purpose | Body → Response |
 |---|---|---|---|
 | GET | `/` | List assets (enriched with `value_twd`/`unrealized_pl`/`roi`) | — → `Asset[]` |
-| GET | `/{asset_id}` | Get one enriched asset | — → `Asset` |
 | POST | `/` | Create an asset | `AssetCreate` → `Asset` (not enriched — see note below) |
 | PUT | `/{asset_id}` | Update asset fields | `AssetUpdate` → `Asset` (not enriched) |
 | DELETE | `/{asset_id}` | Delete an asset (cascades its transactions) | — → 204 |
@@ -22,13 +21,7 @@ The core resource: things with a value that roll up into net worth.
 | PUT | `/transactions/{transaction_id}` | Edit a transaction (blocked for MAX-synced assets) | `TransactionUpdate` → `Transaction` |
 | DELETE | `/transactions/{transaction_id}` | Delete a transaction | — → 204 |
 
-**Enrichment note**: `value_twd`/`unrealized_pl`/`roi` are computed at read time (`AssetService`, see `backend/services/asset_service.py`) from `current_price × Σtransactions` plus the live USDT/TWD rate — they aren't stored columns. `POST`/`PUT` return the raw (un-enriched) row since the frontend re-fetches the list afterward.
-
-## Transactions (cross-asset) — `/api/transactions`
-
-| Method | Path | Purpose | Body → Response |
-|---|---|---|---|
-| POST | `/transfer` | Move funds between two assets in one step (debit one, credit the other) | `TransferCreate` → `{"message": str}` |
+**Enrichment note**: `value_twd`/`unrealized_pl`/`roi` are computed at read time (`AssetService`, see `backend/services/asset_service.py`) from `current_price × Σtransactions` plus the live USDT/TWD rate — they aren't stored columns. `POST`/`PUT` return the raw (un-enriched) row since the frontend re-fetches the list afterward. There is no `GET /{asset_id}` single-asset endpoint — the frontend always works off the full list from `GET /api/dashboard/`.
 
 ## Dashboard — `/api/dashboard`
 
@@ -111,7 +104,6 @@ Exchange/wallet connections used to auto-sync crypto asset balances.
 
 | Method | Path | Purpose | Body → Response |
 |---|---|---|---|
-| GET | `/backup` | Download the raw SQLite DB file | — → file download |
 | GET | `/export/csv` | Export all assets as CSV (id/name/ticker/category/quantity/price/value) | — → CSV file |
 | DELETE | `/reset` | **Wipe all data** (transactions, assets, goals, budgets, settings, connections) and reseed `budget_start_day` | — → `{"message": str}` |
 | POST | `/refresh` | Manually trigger a price update + net-worth snapshot (same job the scheduler runs nightly) | — → `{"message": str}` |

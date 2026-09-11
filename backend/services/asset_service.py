@@ -40,9 +40,5 @@ class AssetService:
 
         return asset
 
-    def get(self, asset_id: int) -> models.Asset | None:
-        asset = self.repo.get(asset_id)
-        return self._enrich(asset) if asset else None
-
     def list_all(self, skip: int = 0, limit: int = 100) -> list[models.Asset]:
         return [self._enrich(a) for a in self.repo.list_all(skip=skip, limit=limit)]

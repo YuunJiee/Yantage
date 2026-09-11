@@ -10,8 +10,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configure logging
+_log_level = getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO)
 logging.basicConfig(
-    level=logging.INFO,
+    level=_log_level,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler()
@@ -68,11 +69,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from .routers import dashboard, assets, stats, goals, transactions, budgets, settings, system, integrations, income, subscriptions
+from .routers import dashboard, assets, stats, goals, budgets, settings, system, integrations, income, subscriptions
 
 app.include_router(dashboard.router)
 app.include_router(assets.router)
-app.include_router(transactions.router)
 app.include_router(goals.router)
 app.include_router(stats.router)
 app.include_router(budgets.router)

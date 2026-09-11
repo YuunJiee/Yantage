@@ -90,38 +90,6 @@ def test_create_transaction_is_transfer_flag(db):
     assert tx.is_transfer is True
 
 
-# ── AssetRepository.transfer_funds ───────────────────────────────────────────
-
-def test_transfer_creates_two_transactions(db):
-    repo = AssetRepository(db)
-    src = repo.create(_fluid_asset("Source"))
-    dst = repo.create(_fluid_asset("Destination"))
-    repo.create_transaction(_transaction(amount=10_000.0), src.id)
-
-    result = repo.transfer_funds(schemas.TransferCreate(
-        from_asset_id=src.id, to_asset_id=dst.id, amount=3_000.0, fee=0.0
-    ))
-    assert result is True
-
-    src_qty = sum(t.amount for t in repo.get(src.id).transactions)
-    dst_qty = sum(t.amount for t in repo.get(dst.id).transactions)
-    assert src_qty == pytest.approx(7_000.0)
-    assert dst_qty == pytest.approx(3_000.0)
-
-
-def test_transfer_with_fee_reduces_deposit(db):
-    repo = AssetRepository(db)
-    src = repo.create(_fluid_asset("A"))
-    dst = repo.create(_fluid_asset("B"))
-    repo.create_transaction(_transaction(amount=5_000.0), src.id)
-
-    repo.transfer_funds(schemas.TransferCreate(
-        from_asset_id=src.id, to_asset_id=dst.id, amount=1_000.0, fee=50.0
-    ))
-    dst_qty = sum(t.amount for t in repo.get(dst.id).transactions)
-    assert dst_qty == pytest.approx(950.0)
-
-
 # ── AssetRepository.update_price ─────────────────────────────────────────────
 
 def test_update_price(db):

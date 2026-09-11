@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from datetime import datetime
 from .. import database
@@ -10,17 +10,6 @@ router = APIRouter(
     tags=["system"],
     responses={404: {"description": "Not found"}},
 )
-
-@router.get("/backup")
-def download_backup():
-    db_path = system_service.get_backup_file_path()
-    if db_path is None:
-        raise HTTPException(status_code=404, detail="Database file not found")
-    return FileResponse(
-        path=db_path,
-        filename="yantage_backup.db",
-        media_type='application/x-sqlite3'
-    )
 
 @router.get("/export/csv")
 def export_assets_csv(db: Session = Depends(database.get_db)):

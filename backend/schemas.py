@@ -19,13 +19,6 @@ class TransactionUpdate(BaseModel):
     date: Optional[datetime] = None
     is_transfer: Optional[bool] = None
 
-class TransferCreate(BaseModel):
-    from_asset_id: int
-    to_asset_id: int
-    amount: float
-    fee: Optional[float] = 0.0
-    date: Optional[datetime] = None
-
 class Transaction(TransactionBase):
     id: int
     asset_id: int

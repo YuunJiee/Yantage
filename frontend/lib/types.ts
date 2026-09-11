@@ -86,14 +86,6 @@ export interface DashboardData {
     updated_at: string;
 }
 
-/** Wallet/exchange integration connection */
-export interface IntegrationConnection {
-    id: number;
-    provider: string;   // 'wallet' | 'binance' | 'max' | 'pionex'
-    label?: string;
-    address?: string;
-}
-
 /** A web3 wallet group combining multiple wallet addresses of the same token */
 export interface AssetGroup {
     isGroup: true;

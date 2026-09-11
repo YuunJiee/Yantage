@@ -14,15 +14,6 @@ def _transaction(amount: float = 1000.0, buy_price: float = 1.0) -> schemas.Tran
     return schemas.TransactionCreate(amount=amount, buy_price=buy_price, date=datetime(2025, 1, 1))
 
 
-def test_get_asset_computes_value_twd_fluid(db):
-    """Fluid assets are TWD-denominated: value_twd = price × qty."""
-    repo = AssetRepository(db)
-    asset = repo.create(schemas.AssetCreate(name="Savings", category="Fluid", current_price=1.0))
-    repo.create_transaction(_transaction(amount=50_000.0, buy_price=1.0), asset.id)
-    fetched = AssetService(db).get(asset.id)
-    assert fetched.value_twd == pytest.approx(50_000.0)
-
-
 def test_list_all_value_twd_no_transactions(db):
     repo = AssetRepository(db)
     repo.create(schemas.AssetCreate(name="Cash", category="Fluid", current_price=1.0))

@@ -181,24 +181,3 @@ class AssetRepository:
             self.db.commit()
             self.db.refresh(tx)
         return tx
-
-    # ── Transfer ──────────────────────────────────────────────────────────────
-
-    def transfer_funds(self, transfer: schemas.TransferCreate) -> bool:
-        now = transfer.date or datetime.now()
-
-        self.create_transaction(
-            schemas.TransactionCreate(amount=-transfer.amount, buy_price=1.0, date=now, is_transfer=True),
-            transfer.from_asset_id,
-        )
-
-        deposit_amount = transfer.amount - (transfer.fee or 0.0)
-        to_asset = self.get(transfer.to_asset_id)
-        if to_asset and to_asset.category == 'Liabilities':
-            deposit_amount = -deposit_amount
-
-        self.create_transaction(
-            schemas.TransactionCreate(amount=deposit_amount, buy_price=1.0, date=now, is_transfer=True),
-            transfer.to_asset_id,
-        )
-        return True

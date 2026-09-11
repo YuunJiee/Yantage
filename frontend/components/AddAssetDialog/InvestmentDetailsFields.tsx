@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { cn } from '@/lib/utils';
-import type { IntegrationConnection } from '@/lib/types';
+import type { IntegrationConnectionResponse } from '@/lib/api';
 import type { AddAssetFormData } from './formState';
 
 interface InvestmentDetailsFieldsProps {
@@ -10,7 +10,7 @@ interface InvestmentDetailsFieldsProps {
     market: string;
     source: string;
     setSource: (s: string) => void;
-    connections: IntegrationConnection[];
+    connections: IntegrationConnectionResponse[];
     selectedConnectionId: string;
     setSelectedConnectionId: (id: string) => void;
     network: string;
@@ -84,7 +84,7 @@ export function InvestmentDetailsFields({
                     <div className="space-y-1.5">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">連接</p>
                         <CustomSelect value={selectedConnectionId} onChange={setSelectedConnectionId}
-                            options={connections.map(c => ({ value: c.id.toString(), label: c.label ?? `連接 ${c.id}` }))} />
+                            options={connections.map(c => ({ value: c.id.toString(), label: c.name || `連接 ${c.id}` }))} />
                     </div>
                     <div className="space-y-1.5">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">網路</p>

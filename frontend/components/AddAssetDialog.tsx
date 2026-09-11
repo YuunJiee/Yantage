@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from '@/components/ui/MoneyInput';
 import { CustomSelect } from "@/components/ui/custom-select";
-import { createAsset, createTransaction, fetchIntegrations } from '@/lib/api';
+import { createAsset, createTransaction, fetchIntegrations, type IntegrationConnectionResponse } from '@/lib/api';
 import { useTickerLookup } from '@/lib/useTickerLookup';
-import type { IntegrationConnection } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { IconPicker, getDefaultIcon } from './IconPicker';
 import { SUB_CATEGORIES, getSubCategoryLabel } from '@/lib/constants';
@@ -30,7 +29,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
 
     // Web3 / Wallet State
     const [source, setSource] = useState('manual'); // manual, wallet
-    const [connections, setConnections] = useState<IntegrationConnection[]>([]);
+    const [connections, setConnections] = useState<IntegrationConnectionResponse[]>([]);
     const [selectedConnectionId, setSelectedConnectionId] = useState<string>('');
     const [network, setNetwork] = useState('Ethereum');
     const [contractAddress, setContractAddress] = useState('');
@@ -72,7 +71,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
 
             // Fetch integrations
             fetchIntegrations().then(data => {
-                setConnections((data as IntegrationConnection[]).filter((c) => c.provider === 'wallet'));
+                setConnections(data.filter((c) => c.provider === 'wallet'));
             }).catch(console.error);
         }
     }, [isOpen, defaultCategory]);
