@@ -19,7 +19,8 @@ backend/
 ├── schemas.py
 ├── database.py
 ├── main.py
-├── scheduler.py
+├── constants.py               # AssetCategory / Provider / GoalType enums — single source of truth
+├── scheduler.py                # per-provider sync jobs derived from services/providers/*.PROVIDERS
 ├── repositories/
 │   ├── base.py               # CrudRepository[ModelT] generic base
 │   ├── asset_repo.py
@@ -38,6 +39,7 @@ backend/
 │   ├── snapshot_service.py
 │   ├── exchange_rate_service.py
 │   ├── asset_service.py      # value_twd/unrealized_pl/roi enrichment (sits above asset_repo)
+│   ├── subscription_service.py  # cycle creation (auto one payment per member) — moved out of subscription_repo
 │   ├── settings_service.py
 │   ├── system_service.py     # backup/export-csv/reset/refresh
 │   ├── ticker_lookup_service.py
@@ -64,11 +66,17 @@ backend/
     ├── currency.py
     ├── icons.py
     ├── math.py
+    ├── category_rules.py      # is_negative_category() — replaces 3 duplicated Liabilities checks
     ├── secrets.py             # API-key / settings-value masking
     └── hmac_signing.py        # MAX / Pionex request signing
 ```
 
 See `docs/API.md` for the full endpoint reference grouped by domain.
+
+Tests live in `backend/tests/` (`python -m pytest backend/tests -q`). `backend/requirements-dev.txt`
+adds pytest/pytest-mock/httpx on top of `requirements.txt` — the `client` fixture in `conftest.py`
+wraps a `TestClient(app)` with `get_db` overridden onto an in-memory SQLite DB (`StaticPool`, since
+`TestClient` runs handlers in a worker thread).
 
 ### Frontend
 ```
@@ -123,17 +131,25 @@ frontend/
 │   │   ├── EditAssetView.tsx
 │   │   ├── QuickAdjustView.tsx
 │   │   └── IncomeItemDialog.tsx
-│   └── ui/                        # shadcn/radix 基礎元件（含 confirm-delete.tsx 共用刪除確認）
+│   └── ui/                        # shadcn/radix 基礎元件（含 confirm-delete.tsx 共用刪除確認、
+│                                   #   section-label.tsx 共用區塊標題、skeleton.tsx 內的 PageError）
 └── lib/
-    ├── hooks.ts                   # SWR hooks，含 useCategoryVisibility()
+    ├── hooks.ts                   # SWR hooks，含 SWR_KEYS / useCategoryVisibility()
     ├── api.ts                     # 唯一的 fetch 入口，所有 mutation 都經過這裡
     ├── types.ts
-    ├── constants.ts               # 含 SUB_CATEGORIES / SUB_CATEGORY_ZH
+    ├── constants.ts               # 含 SUB_CATEGORIES / SUB_CATEGORY_ZH / POSITIVE_CATEGORIES
+    ├── providers.ts               # PROVIDERS 清單 — IntegrationManager 的 icon/預設名稱/select 選項來源
+    ├── useFormSubmit.ts           # 共用 loading/error/try-catch，套在語意相同的 dialog submit（非全套）
     ├── usePrivateMoney.ts         # formatMoney() 的隱私模式包裝
     ├── useTickerLookup.ts
     ├── iconHelper.ts
     └── utils.ts                   # 含 formatMoney()
 ```
+
+資料抓取全走 `lib/hooks.ts` 的 SWR（`mutate(SWR_KEYS.xxx)` 觸發重整），沒有 `router.refresh()` 或手刻
+`useState`+`useEffect` 抓資料的地方。測試用 Vitest + React Testing Library：`*.test.ts(x)` 跟被測試的
+模組放在同一層（例如 `lib/utils.test.ts`），設定檔在根目錄的 `vitest.config.mts`/`vitest.setup.ts`，
+`npm test` 跑一次、`npm run test:watch` 監看模式。
 
 ---
 
@@ -166,6 +182,11 @@ frontend/
 
 - **`wallet.py` 的「已知代幣更新」跟「自動發現新代幣」兩個迴圈刻意不跟 binance/pionex 共用 `sync_asset_balance()`**：兩者共用的部分（ERC20 `balanceOf()` 呼叫 + 依 decimals 換算）已抽成 `_fetch_erc20_balance()`；但一個只更新既有 asset、另一個只建立新 asset 並設定 name/icon/price，若硬塞進同一個「找或建」函式，會導致自動發現的代幣被使用者手動改名後，下次同步又被覆蓋回去——這是刻意保留的行為差異，不是沒發現的重複。
 - **`AssetAccordion.tsx` 的一般資產列跟 web3 群組列沒有合併成單一元件**：兩者共用圖示區塊（`AssetRowIcon`）跟金額計算（`getAssetDisplayValue`），但版面本身（金額+百分比垂直堆疊 vs 金額+展開箭頭水平排列，還有 badge/meta 內容都不同）差異夠大，強行合併會需要一堆條件 prop，判斷不值得，重新評估後維持現狀。
+- **`wallet_config.py` 的 `NETWORKS`/`POPULAR_TOKENS` 維持寫死，不搬進 `SystemSetting`**：對單一自架使用者來說這些值幾乎不會變，搬進資料庫只會多一層要維護的間接層，投入產出比不好。
+- **Provider（binance/max/pionex/wallet）沒有個別的深度單元測試**：背後都是第三方 SDK/API 呼叫，深度 mock 測試投入產出比低；目前靠 `test_scheduler.py`/`test_dashboard_service.py` 等驗證排程跟資料串接邏輯，個別 provider 的 sync 邏輯靠手動測試 + 生產環境觀察。
+- **前端沒有 zod 或其他 runtime API 型別驗證層**：對一人維護、前後端同一個 repo 的專案來說，維護一份 zod schema 跟 `schemas.py` 對齊等於又製造一個要手動同步的來源，投入產出比不好。
+- **卡片容器 class 重複（~16 處）跟 `IconPicker.tsx` 的圖示比對邏輯沒有抽成共用元件**：判斷跟上面幾點類似，硬套共用元件會犧牲彈性，維持現狀。
+- **DB 層 `nullable=False` 沒有補上**（`CryptoConnection.name`/`Asset.name`/`Goal.target_amount` 等本來就必填但 DB schema 沒擋的欄位）：要補上得對正式資料庫跑 batch-alter migration，對單人自架的既有資料庫來說風險（跑壞既有資料）大於好處（Pydantic 層驗證已經擋住新資料的髒寫入），評估後跳過。
 - **通用化 / 多使用者 / i18n**：目前仍是刻意的個人自架單頁工具（zh-TW only、無登入、強制 light mode）。若之後要開放給別人用，需要另外規劃，不是這次重構的目標。
 
 ---
@@ -185,8 +206,8 @@ frontend/
 
 ## What NOT to Change
 
-- Alembic migrations — 穩定，維持現狀。
-- `scheduler.py` — APScheduler 設定維持現狀。
+- Alembic migrations — 既有的 migration 檔不動；新 migration 一律新增檔案（見 `0005_add_fk_indexes.py`）。
+- `scheduler.py` 的 APScheduler 設定（`coalesce`/`misfire_grace_time` 等）——維持現狀；per-provider 的 job 註冊已改成資料驅動（見 `constants.py`/`services/providers/*.PROVIDERS`），加新 provider 不用再動這支檔案。
 - `database.py` — 穩定，無需改動。
 - Docker / docker-compose — 已乾淨。
 - Backend API 端點 — 重寫是前端改版，後端不動。
