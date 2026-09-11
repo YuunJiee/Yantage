@@ -11,6 +11,8 @@ guards that every *Update field is a real field on its *Base, catching
 typos/drift in the other direction too.
 """
 
+from datetime import datetime
+
 import pytest
 from pydantic import ValidationError
 
@@ -236,3 +238,66 @@ def test_subscription_update_rejects_negative_total_cost():
 def test_subscription_member_update_accepts_name():
     update = schemas.SubscriptionMemberUpdate(name="New Name")
     assert update.name == "New Name"
+
+
+# ── Response schemas must serialize pre-existing rows that violate ───────────
+# ── write-time validation added in this rewrite series, or the whole ────────
+# ── GET list endpoint 500s for every user whose data predates it. ───────────
+# (Regression for a real production incident: GET /api/goals/ 500'd for a
+# user with a legacy goal whose data no longer satisfied the new Field/
+# validator constraints on GoalBase, because the Goal response schema used
+# to inherit from GoalBase.)
+
+def test_goal_response_serializes_legacy_zero_target_amount():
+    goal = schemas.Goal(
+        id=1, name="Old Goal", target_amount=0, goal_type="NET_WORTH",
+        allocation_data=None, created_at=datetime.now(),
+    )
+    assert goal.target_amount == 0
+
+
+def test_goal_response_serializes_legacy_non_json_allocation_data():
+    """Pins the exact scenario the frontend's parseAllocation already
+    documents as legacy pre-migration data: allocation_data stored as a
+    bare category-name string instead of a JSON object."""
+    goal = schemas.Goal(
+        id=1, name="Old Allocation Goal", target_amount=100, goal_type="ASSET_ALLOCATION",
+        allocation_data="Stock", created_at=datetime.now(),
+    )
+    assert goal.allocation_data == "Stock"
+
+
+def test_budget_category_response_serializes_legacy_negative_amount():
+    cat = schemas.BudgetCategory(
+        id=1, name="Old Category", budget_amount=-100, created_at=datetime.now(),
+    )
+    assert cat.budget_amount == -100
+
+
+def test_budget_category_response_serializes_legacy_unknown_group_name():
+    cat = schemas.BudgetCategory(
+        id=1, name="Old Category", budget_amount=100, group_name="SomethingElse",
+        created_at=datetime.now(),
+    )
+    assert cat.group_name == "SomethingElse"
+
+
+def test_income_item_response_serializes_legacy_negative_amount():
+    item = schemas.IncomeItem(id=1, name="Old Income", amount=-50, created_at=datetime.now())
+    assert item.amount == -50
+
+
+def test_subscription_response_serializes_legacy_zero_total_shares():
+    sub = schemas.Subscription(
+        id=1, name="Old Sub", total_cost=100, total_shares=0, my_shares=0,
+        collection_period_months=6, created_at=datetime.now(),
+    )
+    assert sub.total_shares == 0
+
+
+def test_subscription_response_serializes_legacy_my_shares_greater_than_total():
+    sub = schemas.Subscription(
+        id=1, name="Old Sub", total_cost=100, total_shares=2, my_shares=5,
+        collection_period_months=6, created_at=datetime.now(),
+    )
+    assert sub.my_shares == 5

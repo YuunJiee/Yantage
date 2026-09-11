@@ -136,8 +136,19 @@ class GoalUpdate(BaseModel):
 
     _check_allocation_data = field_validator('allocation_data')(_validate_allocation_data)
 
-class Goal(GoalBase):
+class Goal(BaseModel):
+    """Deliberately does NOT inherit GoalBase — GoalBase's Field/validator
+    constraints are write-time policy (see docs/specs/goals.md Decision 5)
+    and must not be re-applied when serializing an existing row for a GET
+    response. A pre-existing goal from before that validation existed
+    (e.g. legacy allocation_data stored as a bare category string, per the
+    frontend's own documented fallback for that exact case) would otherwise
+    fail response-model validation and 500 the entire list endpoint."""
     id: int
+    name: str
+    target_amount: float
+    goal_type: GoalType
+    allocation_data: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -188,14 +199,30 @@ class IncomeItemUpdate(BaseModel):
     name: Optional[str] = None
     amount: Optional[float] = Field(default=None, ge=0)
 
-class IncomeItem(IncomeItemBase):
+# IncomeItem/BudgetCategory response schemas deliberately do NOT inherit
+# their *Base — the Base's Field(ge=0)/enum constraints are write-time
+# policy (docs/specs/budgets-income.md Decision 4/5) and must not be
+# re-applied when serializing an existing row for a GET response, or a
+# pre-existing row that predates that validation (e.g. a legacy negative
+# amount, or a group_name outside the enum from a direct-API write before
+# this pass) would fail response-model validation and 500 the whole list
+# endpoint — see the identical fix for Goal below.
+class IncomeItem(BaseModel):
     id: int
+    name: str
+    amount: float
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
-class BudgetCategory(BudgetCategoryBase):
+class BudgetCategory(BaseModel):
     id: int
+    name: str
+    icon: Optional[str] = None
+    budget_amount: float
+    color: Optional[str] = None
+    note: Optional[str] = None
+    group_name: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -319,8 +346,18 @@ class SubscriptionUpdate(BaseModel):
             raise ValueError("my_shares must be <= total_shares")
         return self
 
-class Subscription(SubscriptionBase):
+# Deliberately does NOT inherit SubscriptionBase — its Field(ge=..)/
+# _check_shares constraints are write-time policy (docs/specs/
+# subscriptions.md R6) and must not be re-applied when serializing an
+# existing row for a GET response — see the identical Goal/BudgetCategory/
+# IncomeItem fix above.
+class Subscription(BaseModel):
     id: int
+    name: str
+    total_cost: float
+    total_shares: int
+    my_shares: int
+    collection_period_months: int
     created_at: datetime
     members: List[SubscriptionMember] = []
     cycles: List[CollectionCycle] = []

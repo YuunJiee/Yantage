@@ -161,3 +161,81 @@ def test_refresh_endpoint_returns_200(client):
     """Pins R8: manual refresh is synchronous and returns a success message."""
     res = client.post("/api/system/refresh")
     assert res.status_code == 200
+
+
+# --- Response-model regression: legacy rows must not 500 a list endpoint ---
+#
+# response_model validation only actually runs through the real FastAPI
+# request cycle (the `client` fixture) — every other test in this suite
+# calls router functions directly as plain Python and never exercises this
+# layer at all (see this file's own docstring). This is exactly the layer
+# that broke in production: a pre-existing row that no longer satisfied a
+# newly-added GoalBase/BudgetCategoryBase/IncomeItemBase/SubscriptionBase
+# Field constraint 500'd the whole GET list endpoint, because the response
+# schemas used to inherit those constraints from their *Base. Fixed by
+# making Goal/BudgetCategory/IncomeItem/Subscription independent, lenient
+# response schemas (see schemas.py) — these tests seed a row directly via
+# the ORM (bypassing Pydantic, like real legacy data would) and prove the
+# list endpoint still returns 200.
+
+def test_list_goals_survives_a_legacy_row_with_zero_target_amount(db, client):
+    from backend import models
+    db.add(models.Goal(name="Old Goal", target_amount=0, goal_type="NET_WORTH"))
+    db.commit()
+
+    res = client.get("/api/goals/")
+    assert res.status_code == 200
+    assert res.json()[0]["target_amount"] == 0
+
+
+def test_list_goals_survives_a_legacy_non_json_allocation_data(db, client):
+    from backend import models
+    db.add(models.Goal(
+        name="Old Allocation Goal", target_amount=100, goal_type="ASSET_ALLOCATION",
+        allocation_data="Stock",
+    ))
+    db.commit()
+
+    res = client.get("/api/goals/")
+    assert res.status_code == 200
+    assert res.json()[0]["allocation_data"] == "Stock"
+
+
+def test_list_budget_categories_survives_a_legacy_negative_amount(db, client):
+    from backend import models
+    db.add(models.BudgetCategory(name="Old Category", budget_amount=-100))
+    db.commit()
+
+    res = client.get("/api/budgets/categories")
+    assert res.status_code == 200
+    assert res.json()[0]["budget_amount"] == -100
+
+
+def test_list_budget_categories_survives_a_legacy_unknown_group_name(db, client):
+    from backend import models
+    db.add(models.BudgetCategory(name="Old Category", budget_amount=100, group_name="SomethingElse"))
+    db.commit()
+
+    res = client.get("/api/budgets/categories")
+    assert res.status_code == 200
+    assert res.json()[0]["group_name"] == "SomethingElse"
+
+
+def test_list_income_items_survives_a_legacy_negative_amount(db, client):
+    from backend import models
+    db.add(models.IncomeItem(name="Old Income", amount=-50))
+    db.commit()
+
+    res = client.get("/api/income/items")
+    assert res.status_code == 200
+    assert res.json()[0]["amount"] == -50
+
+
+def test_list_subscriptions_survives_a_legacy_zero_total_shares(db, client):
+    from backend import models
+    db.add(models.Subscription(name="Old Sub", total_cost=100, total_shares=0, my_shares=0))
+    db.commit()
+
+    res = client.get("/api/subscriptions/")
+    assert res.status_code == 200
+    assert res.json()[0]["total_shares"] == 0
