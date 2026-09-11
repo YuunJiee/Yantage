@@ -63,8 +63,6 @@ class Goal(Base):
     name = Column(String, index=True)
     target_amount = Column(Float)
     goal_type = Column(String)  # "NET_WORTH" | "ASSET_ALLOCATION"
-    currency = Column(String, default="TWD")
-    description = Column(String, nullable=True)  # human-readable note
     allocation_data = Column(String, nullable=True)  # JSON: {"Stock": 60, "Fluid": 40} for ASSET_ALLOCATION
     created_at = Column(DateTime, default=datetime.now)
 

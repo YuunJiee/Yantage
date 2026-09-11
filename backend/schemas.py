@@ -1,8 +1,32 @@
-from pydantic import BaseModel, ConfigDict
+import json
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import List, Optional
 from datetime import datetime
 
 from .constants import AssetCategory, Provider, GoalType
+
+
+def _validate_allocation_data(value: Optional[str]) -> Optional[str]:
+    """Shared by GoalBase/GoalUpdate: allocation_data, when present, must be
+    a JSON object of category -> percent whose values sum to ~100 (see
+    docs/specs/goals.md Decision 5)."""
+    if value is None:
+        return value
+    try:
+        parsed = json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        raise ValueError("allocation_data must be valid JSON")
+    if not isinstance(parsed, dict) or not parsed:
+        raise ValueError("allocation_data must be a non-empty JSON object")
+    total = 0.0
+    for v in parsed.values():
+        if not isinstance(v, (int, float)) or isinstance(v, bool):
+            raise ValueError("allocation_data values must be numbers")
+        total += v
+    if abs(total - 100) > 0.01:
+        raise ValueError("allocation_data percentages must sum to 100")
+    return value
 
 # Transaction Schemas
 class TransactionBase(BaseModel):
@@ -95,28 +119,41 @@ class DashboardData(BaseModel):
 # Goal Schemas
 class GoalBase(BaseModel):
     name: str
-    target_amount: float
+    target_amount: float = Field(gt=0)
     goal_type: GoalType
-    currency: Optional[str] = "TWD"
-    description: Optional[str] = None       # human-readable note
     allocation_data: Optional[str] = None   # JSON: {"Stock": 60, "Fluid": 40} for ASSET_ALLOCATION
+
+    _check_allocation_data = field_validator('allocation_data')(_validate_allocation_data)
 
 class GoalCreate(GoalBase):
     pass
 
 class GoalUpdate(BaseModel):
     name: Optional[str] = None
-    target_amount: Optional[float] = None
+    target_amount: Optional[float] = Field(default=None, gt=0)
     goal_type: Optional[GoalType] = None
-    currency: Optional[str] = None
-    description: Optional[str] = None
     allocation_data: Optional[str] = None
+
+    _check_allocation_data = field_validator('allocation_data')(_validate_allocation_data)
 
 class Goal(GoalBase):
     id: int
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class GoalForecast(BaseModel):
+    goal_id: int
+    current_amount: float
+    target_amount: float
+    avg_monthly_growth: float
+    months_to_reach: float
+    predicted_date: str
+
+class ForecastResponse(BaseModel):
+    growth_rate_6mo: float
+    forecasts: List[GoalForecast]
 
 
 

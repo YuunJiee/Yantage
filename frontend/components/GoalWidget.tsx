@@ -1,12 +1,14 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { usePrivacy } from "@/components/PrivacyProvider";
 import { usePrivateMoney } from '@/lib/usePrivateMoney';
 import { useGoals, useForecast } from '@/lib/hooks';
 import type { Goal, DashboardData, Asset } from '@/lib/types';
-import { CATEGORY_ZH } from '@/lib/constants';
+import { CATEGORY_ZH, POSITIVE_CATEGORIES } from '@/lib/constants';
+import { getAssetDisplayValue } from './AssetAccordion/helpers';
 import { Target, AlertTriangle } from 'lucide-react';
+
+const POSITIVE_CATEGORY_SET: ReadonlySet<string> = new Set(POSITIVE_CATEGORIES);
 
 function parseAllocation(data?: string | null): Record<string, number> | null {
     if (!data) return null;
@@ -23,16 +25,19 @@ export function GoalWidget({ dashboardData, onEditGoal, onAddGoal }: {
     onEditGoal: (goal: Goal) => void;
     onAddGoal: () => void;
 }) {
-    const { isPrivacyMode } = usePrivacy();
     const privateMoney = usePrivateMoney();
     const { goals, isError: goalsError, refresh: refreshGoals } = useGoals();
     const { forecastsByGoalId: forecasts } = useForecast();
 
     const netWorth = dashboardData?.net_worth || 0;
     const assets: Asset[] = dashboardData?.assets || [];
-    const totalValue = assets.filter(a => a.include_in_net_worth !== false).reduce((s, a) => s + (a.value_twd || 0), 0);
+    // Positive assets only (excludes Liabilities) — matches how "assets" is
+    // defined everywhere else in the app; see docs/specs/goals.md R2.
+    const totalValue = assets
+        .filter(a => a.include_in_net_worth !== false && POSITIVE_CATEGORY_SET.has(a.category))
+        .reduce((s, a) => s + getAssetDisplayValue(a), 0);
     const categoryValue = (cat: string) =>
-        assets.filter(a => a.include_in_net_worth !== false && a.category === cat).reduce((s, a) => s + (a.value_twd || 0), 0);
+        assets.filter(a => a.include_in_net_worth !== false && a.category === cat).reduce((s, a) => s + getAssetDisplayValue(a), 0);
 
     const fmt = (n: number) => privateMoney(n, '••••', { notation: 'compact' });
 
@@ -62,7 +67,7 @@ export function GoalWidget({ dashboardData, onEditGoal, onAddGoal }: {
 
                 /* ── NET_WORTH ─────────────────────────────── */
                 if (goal.goal_type === 'NET_WORTH') {
-                    const progress = Math.min((netWorth / goal.target_amount) * 100, 100);
+                    const progress = Math.max(0, Math.min((netWorth / goal.target_amount) * 100, 100));
                     const forecast = forecasts[goal.id];
                     const remaining = goal.target_amount - netWorth;
                     const isComplete = netWorth >= goal.target_amount;
@@ -130,9 +135,9 @@ export function GoalWidget({ dashboardData, onEditGoal, onAddGoal }: {
                                             <div className="flex justify-between text-xs mb-1">
                                                 <span className="text-muted-foreground">{CATEGORY_ZH[cat] ?? cat}</span>
                                                 <span className="tabular-nums text-muted-foreground/70">
-                                                    {isPrivacyMode ? '••%' : `${currentPct.toFixed(1)}%`}
+                                                    {currentPct.toFixed(1)}%
                                                     <span className="opacity-50"> / {targetPct}%</span>
-                                                    {!isPrivacyMode && diff !== 0 && (
+                                                    {diff !== 0 && (
                                                         <span className={cn('ml-1', diff > 0 ? 'text-amber-500' : 'text-red-400')}>
                                                             ({diff > 0 ? '+' : ''}{diff.toFixed(1)}%)
                                                         </span>

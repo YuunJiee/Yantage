@@ -33,11 +33,20 @@ def upgrade() -> None:
 
     # Migrate existing ASSET_ALLOCATION goals: copy description → allocation_data,
     # then clear description (it was being used as data storage, not a human note).
-    conn = op.get_bind()
-    conn.execute(sa.text(
-        "UPDATE goals SET allocation_data = description, description = NULL "
-        "WHERE goal_type = 'ASSET_ALLOCATION' AND description IS NOT NULL"
-    ))
+    #
+    # Guarded (added when migration 0007 later dropped `description` entirely,
+    # per docs/specs/goals.md Decision 3): on a fresh install, 0001's
+    # create_all() reads the *current* models.py, which by then no longer
+    # declares `description` — without this guard this UPDATE would crash
+    # every fresh install. Behavior against any database that already has
+    # the column (i.e. every database that has ever actually run this
+    # migration) is unchanged.
+    if _column_exists("goals", "description"):
+        conn = op.get_bind()
+        conn.execute(sa.text(
+            "UPDATE goals SET allocation_data = description, description = NULL "
+            "WHERE goal_type = 'ASSET_ALLOCATION' AND description IS NOT NULL"
+        ))
 
 
 def downgrade() -> None:

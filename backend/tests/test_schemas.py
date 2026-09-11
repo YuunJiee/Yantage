@@ -65,3 +65,66 @@ def test_connection_create_rejects_invalid_provider():
 def test_goal_create_rejects_invalid_goal_type():
     with pytest.raises(ValidationError):
         schemas.GoalCreate(name="X", target_amount=100, goal_type="NETWORTH")
+
+
+# ── docs/specs/goals.md Decision 5: target_amount/allocation_data validation ──
+
+def test_goal_create_rejects_zero_target_amount():
+    with pytest.raises(ValidationError):
+        schemas.GoalCreate(name="X", target_amount=0, goal_type="NET_WORTH")
+
+
+def test_goal_create_rejects_negative_target_amount():
+    with pytest.raises(ValidationError):
+        schemas.GoalCreate(name="X", target_amount=-100, goal_type="NET_WORTH")
+
+
+def test_goal_create_accepts_positive_target_amount():
+    goal = schemas.GoalCreate(name="X", target_amount=1, goal_type="NET_WORTH")
+    assert goal.target_amount == 1
+
+
+def test_goal_update_rejects_non_positive_target_amount():
+    with pytest.raises(ValidationError):
+        schemas.GoalUpdate(target_amount=0)
+
+
+def test_goal_update_allows_omitting_target_amount():
+    update = schemas.GoalUpdate(name="Renamed")
+    assert update.target_amount is None
+
+
+def test_goal_create_rejects_malformed_allocation_json():
+    with pytest.raises(ValidationError):
+        schemas.GoalCreate(
+            name="X", target_amount=100, goal_type="ASSET_ALLOCATION", allocation_data="not json",
+        )
+
+
+def test_goal_create_rejects_allocation_not_summing_to_100():
+    with pytest.raises(ValidationError):
+        schemas.GoalCreate(
+            name="X", target_amount=100, goal_type="ASSET_ALLOCATION",
+            allocation_data='{"Stock": 60, "Fluid": 30}',
+        )
+
+
+def test_goal_create_accepts_allocation_summing_to_100():
+    goal = schemas.GoalCreate(
+        name="X", target_amount=100, goal_type="ASSET_ALLOCATION",
+        allocation_data='{"Stock": 60, "Fluid": 40}',
+    )
+    assert goal.allocation_data == '{"Stock": 60, "Fluid": 40}'
+
+
+def test_goal_create_accepts_allocation_within_rounding_tolerance():
+    goal = schemas.GoalCreate(
+        name="X", target_amount=100, goal_type="ASSET_ALLOCATION",
+        allocation_data='{"Stock": 60, "Fluid": 40.005}',
+    )
+    assert goal.allocation_data is not None
+
+
+def test_goal_update_rejects_allocation_not_summing_to_100():
+    with pytest.raises(ValidationError):
+        schemas.GoalUpdate(allocation_data='{"Stock": 200}')

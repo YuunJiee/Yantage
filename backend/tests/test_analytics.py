@@ -4,11 +4,14 @@ DB tests use the shared ``db`` fixture and autouse mocks from conftest.py.
 """
 
 import json
+import re
 import pytest
 from datetime import date, datetime, timedelta
 from unittest.mock import patch
 
-from backend import models
+from backend import models, schemas
+from backend.repositories.asset_repo import AssetRepository
+from backend.repositories.goal_repo import GoalRepository
 from backend.services import analytics_service
 
 
@@ -93,3 +96,78 @@ def test_goal_forecast_propagates_errors_instead_of_swallowing(db):
     ):
         with pytest.raises(RuntimeError):
             analytics_service.compute_goal_forecast(db)
+
+
+def test_goal_forecast_propagates_errors_from_dashboard_metrics(db):
+    with patch(
+        "backend.services.analytics_service.calculate_dashboard_metrics",
+        side_effect=RuntimeError("boom"),
+    ):
+        with pytest.raises(RuntimeError):
+            analytics_service.compute_goal_forecast(db)
+
+
+# ── compute_goal_forecast (docs/specs/goals.md R3-R5) ─────────────────────────
+
+def _asset(db, *, category="Fluid", amount=1000.0, current_price=1.0):
+    repo = AssetRepository(db)
+    asset = repo.create(schemas.AssetCreate(name="X", category=category, current_price=current_price))
+    repo.create_transaction(schemas.TransactionCreate(amount=amount, buy_price=current_price), asset.id)
+    return asset
+
+
+def test_goal_forecast_excludes_asset_allocation_goals(db):
+    GoalRepository(db).create(schemas.GoalCreate(
+        name="Alloc", target_amount=100, goal_type="ASSET_ALLOCATION", allocation_data='{"Stock": 100}',
+    ))
+    result = analytics_service.compute_goal_forecast(db)
+    assert result["forecasts"] == []
+
+
+def test_goal_forecast_achieved_when_live_net_worth_meets_target(db):
+    """R3: the completion check uses the live dashboard net worth, not a
+    stale/absent history snapshot."""
+    _asset(db, amount=1_000_000.0, current_price=1.0)
+    goal = GoalRepository(db).create(
+        schemas.GoalCreate(name="Retire", target_amount=500_000, goal_type="NET_WORTH")
+    )
+    result = analytics_service.compute_goal_forecast(db)
+    forecast = next(f for f in result["forecasts"] if f["goal_id"] == goal.id)
+    assert forecast["predicted_date"] == "已達成"
+    assert forecast["months_to_reach"] == 0
+    assert forecast["current_amount"] == pytest.approx(1_000_000.0)
+
+
+def test_goal_forecast_uses_live_net_worth_not_stale_snapshot(db):
+    """A history snapshot showing the target already met must NOT mark the
+    goal achieved if the live (current) net worth hasn't actually met it —
+    this is the exact staleness bug R3 fixes."""
+    _insert_snapshots(db, n_days=182, start_value=600_000.0)  # flat: value stays 600k+i*1000
+    # No real assets created -> live net worth is 0, well below target.
+    goal = GoalRepository(db).create(
+        schemas.GoalCreate(name="Retire", target_amount=500_000, goal_type="NET_WORTH")
+    )
+    result = analytics_service.compute_goal_forecast(db)
+    forecast = next(f for f in result["forecasts"] if f["goal_id"] == goal.id)
+    assert forecast["current_amount"] == pytest.approx(0.0)
+    assert forecast["predicted_date"] != "已達成"
+
+
+def test_goal_forecast_no_growth_prediction_in_chinese(db):
+    goal = GoalRepository(db).create(
+        schemas.GoalCreate(name="Retire", target_amount=500_000, goal_type="NET_WORTH")
+    )
+    result = analytics_service.compute_goal_forecast(db)
+    forecast = next(f for f in result["forecasts"] if f["goal_id"] == goal.id)
+    assert forecast["predicted_date"] == "成長趨勢不明"
+    assert forecast["months_to_reach"] == 999
+
+
+def test_goal_forecast_predicted_date_is_chinese_year_month_format(db):
+    _insert_snapshots(db, n_days=182, start_value=100_000.0)  # grows by 1000/day
+    goal = GoalRepository(db).create(
+        schemas.GoalCreate(name="Retire", target_amount=10_000_000, goal_type="NET_WORTH")
+    )
+    result = analytics_service.compute_goal_forecast(db)
+    forecast = next(f for f in result["forecasts"] if f["goal_id"] == goal.id)
+    assert re.match(r"^\d+年\d{1,2}月$", forecast["predicted_date"]), forecast["predicted_date"]

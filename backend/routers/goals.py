@@ -26,10 +26,16 @@ def create_goal(goal: schemas.GoalCreate, db: Session = Depends(database.get_db)
 
 @router.put("/{goal_id}", response_model=schemas.Goal)
 def update_goal(goal_id: int, goal: schemas.GoalUpdate, db: Session = Depends(database.get_db)):
-    db_goal = GoalRepository(db).update(goal_id, goal)
-    if db_goal is None:
+    repo = GoalRepository(db)
+    existing = repo.get(goal_id)
+    if existing is None:
         raise HTTPException(status_code=404, detail="Goal not found")
-    return db_goal
+    if goal.goal_type is not None and goal.goal_type != existing.goal_type:
+        raise HTTPException(
+            status_code=422,
+            detail="Cannot change an existing goal's type — delete and recreate it instead",
+        )
+    return repo.update(goal_id, goal)
 
 
 @router.delete("/{goal_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -20,6 +20,9 @@ class CrudRepository(Generic[ModelT]):
     def _base_query(self):
         return self.db.query(self.model)
 
+    def get(self, item_id: int) -> ModelT | None:
+        return self._base_query().filter(self.model.id == item_id).first()
+
     def list_all(self, skip: int = 0, limit: int = 100) -> list[ModelT]:
         return self._base_query().offset(skip).limit(limit).all()
 

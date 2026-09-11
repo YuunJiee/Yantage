@@ -51,8 +51,6 @@ export interface Goal {
     name: string;
     goal_type: 'NET_WORTH' | 'ASSET_ALLOCATION';
     target_amount: number;
-    currency: string;
-    description?: string;        // human-readable note
     allocation_data?: string;    // JSON: {"Stock": 60, "Fluid": 40} for ASSET_ALLOCATION
 }
 
@@ -126,6 +124,7 @@ export interface TickerLookupResult {
 
 /** Forecast envelope returned by /api/stats/forecast */
 export interface ForecastResponse {
+    growth_rate_6mo: number;
     forecasts: GoalForecast[];
 }
 

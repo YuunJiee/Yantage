@@ -13,6 +13,7 @@ import { createGoal, updateGoal, deleteGoal } from '@/lib/api';
 import { SWR_KEYS } from '@/lib/hooks';
 import { useFormSubmit } from '@/lib/useFormSubmit';
 import { ConfirmDelete } from '@/components/ui/confirm-delete';
+import { useToast } from '@/components/ui/toast';
 import { Trash2 } from 'lucide-react';
 import type { Goal } from '@/lib/types';
 import { CATEGORY_ZH, POSITIVE_CATEGORIES } from '@/lib/constants';
@@ -36,11 +37,12 @@ interface GoalDialogProps {
 }
 
 export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
+    const { toast } = useToast();
     const refreshGoals = () => {
         mutate(SWR_KEYS.goals);
         mutate(SWR_KEYS.forecast);
     };
-    const { submit: submitGoal, loading } = useFormSubmit(async (payload: Record<string, unknown>) => {
+    const { submit: submitGoal, loading, error: goalError } = useFormSubmit(async (payload: Record<string, unknown>) => {
         if (initialGoal) {
             await updateGoal(initialGoal.id, payload);
         } else {
@@ -49,13 +51,21 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
         onClose();
         refreshGoals();
     });
-    const { submit: submitDelete, loading: deleting } = useFormSubmit(async () => {
+    const { submit: submitDelete, loading: deleting, error: deleteError } = useFormSubmit(async () => {
         if (!initialGoal) return;
         await deleteGoal(initialGoal.id);
         onClose();
         refreshGoals();
     });
     const [confirmDelete, setConfirmDelete] = useState(false);
+
+    useEffect(() => {
+        if (goalError) toast(initialGoal ? '更新目標失敗' : '新增目標失敗', 'error');
+    }, [goalError]);
+
+    useEffect(() => {
+        if (deleteError) toast('刪除目標失敗', 'error');
+    }, [deleteError]);
 
     const [goalType, setGoalType] = useState<'NET_WORTH' | 'ASSET_ALLOCATION'>('NET_WORTH');
     const [name, setName] = useState('');
@@ -132,7 +142,7 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
     const handleDelete = () => submitDelete();
 
     const isAllocation = goalType === 'ASSET_ALLOCATION';
-    const isValid = isAllocation ? Math.abs(total - 100) <= 0.01 : !!targetAmount;
+    const isValid = isAllocation ? Math.abs(total - 100) <= 0.01 : !!targetAmount && parseFloat(targetAmount) > 0;
 
     return (
         <Sheet isOpen={isOpen} onClose={onClose} title={initialGoal ? '更新財務目標' : '設定財務目標'}>
@@ -141,7 +151,17 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
                 {/* ── 目標類型 ──────────────────────────── */}
                 <div className="pb-5">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">目標類型</p>
-                    <CustomSelect value={goalType} onChange={(v) => setGoalType(v as 'NET_WORTH' | 'ASSET_ALLOCATION')} options={goalTypes} />
+                    <CustomSelect
+                        value={goalType}
+                        onChange={(v) => setGoalType(v as 'NET_WORTH' | 'ASSET_ALLOCATION')}
+                        options={goalTypes}
+                        disabled={!!initialGoal}
+                    />
+                    {initialGoal && (
+                        <p className="text-[11px] text-muted-foreground mt-1.5">
+                            目標類型建立後無法變更，如需改變類型請刪除後重新建立。
+                        </p>
+                    )}
                 </div>
 
                 {/* ── 基本資訊 ───────────────────────────── */}

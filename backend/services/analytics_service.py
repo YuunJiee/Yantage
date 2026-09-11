@@ -15,6 +15,7 @@ from ..utils.currency import is_usd_denominated
 from ..utils.category_rules import is_negative_category
 from ..constants import AssetCategory, GoalType
 from ..services.exchange_rate_service import get_usdt_twd_rate
+from ..services.dashboard_service import calculate_dashboard_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -185,19 +186,22 @@ def compute_goal_forecast(db: Session) -> dict:
 
     goals = GoalRepository(db).list_all()
     nw_goals = [g for g in goals if g.goal_type == GoalType.NET_WORTH]
-    current_nw = history_data[-1]['value'] if history_data else 0
+    # Live figure, not the (possibly stale-by-a-day) history snapshot — see
+    # docs/specs/goals.md R3. The growth *trend* above still legitimately
+    # needs the 6-month history window; only the current position doesn't.
+    current_nw = calculate_dashboard_metrics(db).net_worth
 
     forecasts = []
     for goal in nw_goals:
         remaining = goal.target_amount - current_nw
         if remaining <= 0:
-            prediction, months_to_go = "Achieved", 0
+            prediction, months_to_go = "已達成", 0
         elif avg_growth <= 0:
-            prediction, months_to_go = "N/A (No Growth)", 999
+            prediction, months_to_go = "成長趨勢不明", 999
         else:
             months_to_go = remaining / avg_growth
             future_date = today + timedelta(days=int(months_to_go * 30))
-            prediction = future_date.strftime("%b %Y")
+            prediction = f"{future_date.year}年{future_date.month}月"
 
         forecasts.append({
             "goal_id":            goal.id,
