@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recha
 import { usePrivacy } from "@/components/PrivacyProvider";
 import { cn, formatMoney } from "@/lib/utils";
 import type { Asset } from '@/lib/types';
-import { CATEGORY_ZH } from '@/lib/constants';
+import { CATEGORY_ZH, CATEGORY_CSS_VARS } from '@/lib/constants';
 
 const CHART_THEMES: Record<string, string[]> = {
     'Morandi': ['#A4C3B2', '#E0D5C3', '#D4A59A', '#8199A6', '#8ABF9E', '#C5AFA5'],
@@ -92,15 +92,7 @@ export function AssetAllocationWidget({ assets }: AssetAllocationWidgetProps) {
                                 {data.map((entry, index) => {
                                     let fillColor = colors[index % colors.length];
                                     if (viewMode === 'Category') {
-                                        const semanticMap: Record<string, string> = {
-                                            'Fluid': 'var(--color-fluid)',
-                                            'Stock': 'var(--color-stock)',
-                                            'Crypto': 'var(--color-crypto)',
-                                            'Fixed': 'var(--color-fixed)',
-                                            'Receivables': 'var(--color-receivables)',
-                                            'Liabilities': 'var(--color-liabilities)'
-                                        };
-                                        const semantic = semanticMap[entry.name];
+                                        const semantic = CATEGORY_CSS_VARS[entry.name];
                                         if (semantic) fillColor = semantic;
                                     }
                                     return (

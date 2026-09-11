@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { TrendingUp, TrendingDown, ArrowRightLeft, Pencil, Wallet } from 'lucide-react';
+import { SectionLabel } from '@/components/ui/section-label';
 import type { Asset } from '@/lib/types';
 
 interface AssetHistoryDialogProps {
@@ -90,7 +91,7 @@ export function AssetHistoryView({ asset, onEdit, onAdjustBalance }: Omit<AssetH
             {/* Transaction list */}
             <div>
                 <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">交易紀錄</h3>
+                    <SectionLabel>交易紀錄</SectionLabel>
                     <span className="text-xs text-muted-foreground">{sortedTransactions.length} 筆</span>
                 </div>
 

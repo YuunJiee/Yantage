@@ -7,11 +7,13 @@ import { MoneyInput } from '@/components/ui/MoneyInput';
 import { CustomSelect } from "@/components/ui/custom-select";
 import { createAsset, createTransaction, fetchIntegrations, type IntegrationConnectionResponse } from '@/lib/api';
 import { useTickerLookup } from '@/lib/useTickerLookup';
-import { useRouter } from 'next/navigation';
+import { mutate } from 'swr';
+import { SWR_KEYS } from '@/lib/hooks';
 import { IconPicker, getDefaultIcon } from './IconPicker';
 import { SUB_CATEGORIES, getSubCategoryLabel } from '@/lib/constants';
 import { emptyAddAssetForm } from './AddAssetDialog/formState';
 import { InvestmentDetailsFields } from './AddAssetDialog/InvestmentDetailsFields';
+import { FormSectionLabel as SectionLabel } from './ui/section-label';
 
 interface AddAssetDialogProps {
     isOpen: boolean;
@@ -20,7 +22,6 @@ interface AddAssetDialogProps {
 }
 
 export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDialogProps) {
-    const router = useRouter();
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
 
@@ -132,7 +133,7 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                 });
             }
 
-            router.refresh();
+            mutate(SWR_KEYS.dashboard);
             onClose();
             toast('資產新增成功', 'success');
             setFormData(emptyAddAssetForm());
@@ -166,10 +167,6 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
 
     // Calc default icon for preview
     const defaultIconPreview = getDefaultIcon(formData.category, formData.subCategory);
-
-    const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">{children}</p>
-    );
 
     return (
         <Sheet isOpen={isOpen} onClose={onClose} title="新增資產">

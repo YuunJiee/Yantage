@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createTransaction } from '@/lib/api';
-import { useRouter } from 'next/navigation';
+import { useFormSubmit } from '@/lib/useFormSubmit';
+import { mutate } from 'swr';
+import { SWR_KEYS } from '@/lib/hooks';
 import { MoneyInput } from '@/components/ui/MoneyInput';
 import type { Asset } from '@/lib/types';
 
@@ -15,8 +17,6 @@ interface QuickAdjustViewProps {
 }
 
 export function QuickAdjustView({ asset, onClose, onBack }: QuickAdjustViewProps) {
-    const router = useRouter();
-    const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<'set' | 'adjust'>('set');
     const [value, setValue] = useState('');
     const [price, setPrice] = useState(String(asset.current_price || ''));
@@ -30,28 +30,25 @@ export function QuickAdjustView({ asset, onClose, onBack }: QuickAdjustViewProps
     const currentBalance = asset.transactions?.reduce((acc, t) => acc + t.amount, 0) ?? 0;
     const needsPrice = asset.category === 'Stock' || asset.category === 'Crypto';
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            const amount = parseFloat(value);
-            if (isNaN(amount)) return;
-            const diff = mode === 'set' ? amount - currentBalance : amount;
-            if (diff !== 0) {
-                await createTransaction(asset.id, {
-                    amount: diff,
-                    buy_price: parseFloat(price) || asset.current_price || 1,
-                    date: new Date(date).toISOString(),
-                });
-            }
-            router.refresh();
-            onClose();
-            setValue('');
-        } catch (error) {
-            console.error('Failed to adjust balance', error);
-        } finally {
-            setLoading(false);
+    const { submit: submitAdjust, loading } = useFormSubmit(async () => {
+        const amount = parseFloat(value);
+        if (isNaN(amount)) return;
+        const diff = mode === 'set' ? amount - currentBalance : amount;
+        if (diff !== 0) {
+            await createTransaction(asset.id, {
+                amount: diff,
+                buy_price: parseFloat(price) || asset.current_price || 1,
+                date: new Date(date).toISOString(),
+            });
         }
+        mutate(SWR_KEYS.dashboard);
+        onClose();
+        setValue('');
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        submitAdjust();
     };
 
     const parsedValue = parseFloat(value);

@@ -6,14 +6,17 @@ import { Button } from '@/components/ui/button';
 import { useSubscriptions } from '@/lib/hooks';
 import { NewSubscriptionDialog } from '@/components/subscriptions/NewSubscriptionDialog';
 import { SubscriptionCard } from '@/components/subscriptions/SubscriptionCard';
+import { PageError } from '@/components/ui/skeleton';
 
 export default function SubscriptionsPage() {
-    const { subscriptions: subs, isLoading, refresh } = useSubscriptions();
+    const { subscriptions: subs, isLoading, isError, refresh } = useSubscriptions();
     const [showNew, setShowNew] = useState(false);
 
     const handleMutate = useCallback(() => { refresh(); }, [refresh]);
 
     const pendingCount = subs.flatMap(s => s.cycles.flatMap(c => c.payments)).filter(p => !p.paid_at).length;
+
+    if (isError) return <PageError onRetry={refresh} />;
 
     return (
         <div className="mx-auto max-w-2xl px-4 py-8 space-y-6 pb-24">

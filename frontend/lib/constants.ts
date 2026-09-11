@@ -43,6 +43,20 @@ export const DASHBOARD_CATEGORY_ORDER = [
     'Liabilities',
 ] as const;
 
+/** All categories except Liabilities — the denominator for "% of total assets" calcs. */
+export const POSITIVE_CATEGORIES = DASHBOARD_CATEGORY_ORDER.filter(c => c !== 'Liabilities');
+
+/** Raw CSS custom-property values per category (for chart libs like Recharts
+ * that need the color string itself, not a Tailwind class — see CATEGORY_COLORS). */
+export const CATEGORY_CSS_VARS: Record<string, string> = {
+    Fluid: 'var(--color-fluid)',
+    Crypto: 'var(--color-crypto)',
+    Stock: 'var(--color-stock)',
+    Fixed: 'var(--color-fixed)',
+    Receivables: 'var(--color-receivables)',
+    Liabilities: 'var(--color-liabilities)',
+};
+
 /** zh-TW display labels for asset categories. */
 export const CATEGORY_ZH: Record<string, string> = {
     Fluid: '流動資產',

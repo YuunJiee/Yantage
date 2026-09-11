@@ -3,6 +3,7 @@ import { CustomSelect } from "@/components/ui/custom-select";
 import { cn } from '@/lib/utils';
 import type { IntegrationConnectionResponse } from '@/lib/api';
 import type { AddAssetFormData } from './formState';
+import { FormSectionLabel as SectionLabel } from '../ui/section-label';
 
 interface InvestmentDetailsFieldsProps {
     formData: AddAssetFormData;
@@ -22,10 +23,6 @@ interface InvestmentDetailsFieldsProps {
     fetchedPrice: number | null;
     onTickerBlur: () => void;
 }
-
-const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">{children}</p>
-);
 
 /** Crypto/Stock-only fields: source toggle, Web3 wallet fields, ticker input with live price. */
 export function InvestmentDetailsFields({

@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useCategoryVisibility } from '@/lib/hooks';
+import { useCategoryVisibility, useDashboard } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 import { Plus, Target, Link as LinkIcon } from 'lucide-react';
-import { CATEGORY_COLORS, CATEGORY_ZH, DASHBOARD_CATEGORY_ORDER } from '@/lib/constants';
+import { CATEGORY_COLORS, CATEGORY_ZH, DASHBOARD_CATEGORY_ORDER, POSITIVE_CATEGORIES } from '@/lib/constants';
 import type { Goal, DashboardData } from '@/lib/types';
 
 import { NetWorthHero } from './dashboard/NetWorthHero';
@@ -19,17 +19,19 @@ import { GoalDialog } from './GoalDialog';
 import { IntegrationDialog } from './IntegrationDialog';
 
 interface DashboardClientProps {
+    /** Server-rendered initial data — avoids a loading flash while SWR takes over for live updates. */
     data: DashboardData;
 }
 
-export function DashboardClient({ data }: DashboardClientProps) {
+export function DashboardClient({ data: initialData }: DashboardClientProps) {
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
     const [assetView, setAssetView] = useState<'list' | 'chart'>('list');
     const [isIntegrationOpen, setIsIntegrationOpen] = useState(false);
-    const [goalsRefreshTrigger, setGoalsRefreshTrigger] = useState(0);
     const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
     const { visibility: visibleCategories } = useCategoryVisibility();
+    const { dashboard } = useDashboard(initialData);
+    const data = dashboard ?? initialData;
 
     const { assets } = data;
 
@@ -42,7 +44,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
                 return sum + (a.current_price ?? 0) * qty;
             }, 0);
 
-    const totalPositiveAssets = ['Fluid', 'Stock', 'Crypto', 'Receivables']
+    const totalPositiveAssets = POSITIVE_CATEGORIES
         .reduce((sum, cat) => sum + getCategoryTotal(cat), 0);
 
     const visibleOrder = DASHBOARD_CATEGORY_ORDER.filter(cat => visibleCategories[cat] !== false);
@@ -59,7 +61,6 @@ export function DashboardClient({ data }: DashboardClientProps) {
                     render: () => (
                         <GoalWidget
                             dashboardData={data}
-                            refreshTrigger={goalsRefreshTrigger}
                             onEditGoal={(goal) => {
                                 setEditingGoal(goal);
                                 setIsGoalDialogOpen(true);
@@ -156,7 +157,6 @@ export function DashboardClient({ data }: DashboardClientProps) {
                 onClose={() => {
                     setIsGoalDialogOpen(false);
                     setEditingGoal(null);
-                    setGoalsRefreshTrigger(i => i + 1);
                 }}
                 initialGoal={editingGoal}
             />

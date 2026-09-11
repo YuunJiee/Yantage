@@ -35,6 +35,7 @@ export interface Asset {
     connection_id?: number;
     network?: string;
     contract_address?: string;
+    decimals?: number;
     last_updated_at?: string;
     /** Nested integration connection, if asset is linked to an exchange/wallet */
     connection?: {
@@ -120,6 +121,7 @@ export interface HistoryPoint {
 /** Ticker lookup result returned by /api/assets/lookup/{ticker} */
 export interface TickerLookupResult {
     name?: string;
+    symbol?: string;
     price?: number;
     error?: string;
 }

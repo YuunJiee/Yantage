@@ -6,17 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from '@/components/ui/MoneyInput';
 import { CustomSelect } from "@/components/ui/custom-select";
-import { useRouter } from 'next/navigation';
+import { mutate } from 'swr';
 import { cn } from "@/lib/utils";
 
 import { createGoal, updateGoal, deleteGoal } from '@/lib/api';
+import { SWR_KEYS } from '@/lib/hooks';
+import { useFormSubmit } from '@/lib/useFormSubmit';
 import { ConfirmDelete } from '@/components/ui/confirm-delete';
 import { Trash2 } from 'lucide-react';
 import type { Goal } from '@/lib/types';
-import { CATEGORY_ZH } from '@/lib/constants';
-
-// Categories available for allocation goals
-const ALLOCATION_CATEGORIES = ['Fluid', 'Stock', 'Crypto', 'Fixed', 'Receivables'];
+import { CATEGORY_ZH, POSITIVE_CATEGORIES } from '@/lib/constants';
 
 type AllocationMap = Record<string, number>; // { Fluid: 20, Stock: 50, ... }
 
@@ -37,9 +36,25 @@ interface GoalDialogProps {
 }
 
 export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
-    const router = useRouter();
-    const [loading, setLoading] = useState(false);
-    const [deleting, setDeleting] = useState(false);
+    const refreshGoals = () => {
+        mutate(SWR_KEYS.goals);
+        mutate(SWR_KEYS.forecast);
+    };
+    const { submit: submitGoal, loading } = useFormSubmit(async (payload: Record<string, unknown>) => {
+        if (initialGoal) {
+            await updateGoal(initialGoal.id, payload);
+        } else {
+            await createGoal(payload as Parameters<typeof createGoal>[0]);
+        }
+        onClose();
+        refreshGoals();
+    });
+    const { submit: submitDelete, loading: deleting } = useFormSubmit(async () => {
+        if (!initialGoal) return;
+        await deleteGoal(initialGoal.id);
+        onClose();
+        refreshGoals();
+    });
     const [confirmDelete, setConfirmDelete] = useState(false);
 
     const [goalType, setGoalType] = useState<'NET_WORTH' | 'ASSET_ALLOCATION'>('NET_WORTH');
@@ -88,13 +103,12 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
         setAllocation(next);
     };
 
-    const availableToAdd = ALLOCATION_CATEGORIES.filter(c => !(c in allocation));
+    const availableToAdd = POSITIVE_CATEGORIES.filter(c => !(c in allocation));
 
     // ----- Submit -----
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (goalType === 'ASSET_ALLOCATION' && Math.abs(total - 100) > 0.01) return;
-        setLoading(true);
 
         const payload =
             goalType === 'NET_WORTH'
@@ -111,35 +125,11 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
                     allocation_data: JSON.stringify(allocation),
                 };
 
-        try {
-            if (initialGoal) {
-                await updateGoal(initialGoal.id, payload);
-            } else {
-                await createGoal(payload);
-            }
-            onClose();
-            router.refresh();
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
+        submitGoal(payload);
     };
 
     // ----- Delete -----
-    const handleDelete = async () => {
-        if (!initialGoal) return;
-        setDeleting(true);
-        try {
-            await deleteGoal(initialGoal.id);
-            onClose();
-            router.refresh();
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setDeleting(false);
-        }
-    };
+    const handleDelete = () => submitDelete();
 
     const isAllocation = goalType === 'ASSET_ALLOCATION';
     const isValid = isAllocation ? Math.abs(total - 100) <= 0.01 : !!targetAmount;

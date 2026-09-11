@@ -1,17 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { mutate } from 'swr';
 import { Eye, EyeOff, Settings, ArrowLeft, RefreshCw } from 'lucide-react';
 import { usePrivacy } from '@/components/PrivacyProvider';
 import { useState } from 'react';
 import { refreshPrices } from '@/lib/api';
+import { SWR_KEYS } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 
 export function TopBar() {
     const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
     const pathname = usePathname();
-    const router = useRouter();
     const isHome = pathname === '/';
     const [refreshing, setRefreshing] = useState(false);
 
@@ -20,7 +21,7 @@ export function TopBar() {
         setRefreshing(true);
         try {
             await refreshPrices();
-            router.refresh();
+            mutate(SWR_KEYS.dashboard);
         } finally {
             setRefreshing(false);
         }

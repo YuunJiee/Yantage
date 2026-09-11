@@ -6,11 +6,12 @@ import { MoneyInput } from '@/components/ui/MoneyInput';
 import { CustomSelect } from "@/components/ui/custom-select";
 import { updateAsset, deleteAsset } from '@/lib/api';
 import type { Asset } from '@/lib/types';
-import { useRouter } from 'next/navigation';
+import { mutate } from 'swr';
 import { Trash2, ArrowLeft } from 'lucide-react';
 import { IconPicker, getDefaultIcon } from '../IconPicker';
 import { ConfirmDelete } from '@/components/ui/confirm-delete';
 import { SUB_CATEGORIES, getSubCategoryLabel } from '@/lib/constants';
+import { SWR_KEYS } from '@/lib/hooks';
 
 interface EditAssetViewProps {
     asset: Asset | null;
@@ -19,7 +20,6 @@ interface EditAssetViewProps {
 }
 
 export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
-    const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -63,7 +63,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
         setLoading(true);
         try {
             await deleteAsset(asset.id);
-            router.refresh();
+            mutate(SWR_KEYS.dashboard);
             onClose();
         } catch {
             alert('Delete failed');
@@ -94,9 +94,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                 payment_due_day: formData.category === 'Liabilities' && formData.paymentDueDay ? parseInt(formData.paymentDueDay as string) : null
             });
 
-
-
-            router.refresh();
+            mutate(SWR_KEYS.dashboard);
             onClose();
         } catch (error) {
             console.error("Failed to update asset", error);

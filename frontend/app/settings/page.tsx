@@ -7,31 +7,36 @@ import { Input } from "@/components/ui/input";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { Download, Trash2, History, PieChart, ChevronRight, SquareSplitHorizontal } from 'lucide-react';
 import { CategoryVisibility } from "@/components/CategoryVisibility";
-import { fetchSetting, updateSetting, fetchDashboardData, apiFetch, API_URL } from '@/lib/api';
+import { SectionLabel } from "@/components/ui/section-label";
+import { PageError } from "@/components/ui/skeleton";
+import { updateSetting, fetchDashboardData, apiFetch, API_URL } from '@/lib/api';
+import { useSetting } from '@/lib/hooks';
 
 export default function SettingsPage() {
+    const { value: budgetStartDaySetting, isError: budgetStartDayError, refresh: refreshBudgetStartDay } = useSetting('budget_start_day');
+    const { value: updateIntervalSetting, isError: updateIntervalError, refresh: refreshUpdateInterval } = useSetting('price_update_interval_minutes');
     const [budgetStartDay, setBudgetStartDay] = useState('1');
     const [updateInterval, setUpdateInterval] = useState('60');
     const [resetStep, setResetStep] = useState(0);
 
     useEffect(() => {
-        Promise.all([
-            fetchSetting('budget_start_day'),
-            fetchSetting('price_update_interval_minutes'),
-        ]).then(([d, u]) => {
-            if (d.value) setBudgetStartDay(String(d.value));
-            if (u.value) setUpdateInterval(String(u.value));
-        }).catch(console.error);
-    }, []);
+        if (budgetStartDaySetting) setBudgetStartDay(budgetStartDaySetting);
+    }, [budgetStartDaySetting]);
 
-    const handleSaveUpdateInterval = (val: string) => {
+    useEffect(() => {
+        if (updateIntervalSetting) setUpdateInterval(updateIntervalSetting);
+    }, [updateIntervalSetting]);
+
+    const handleSaveUpdateInterval = async (val: string) => {
         setUpdateInterval(val);
-        updateSetting('price_update_interval_minutes', val);
+        await updateSetting('price_update_interval_minutes', val);
+        refreshUpdateInterval();
     };
 
-    const handleSaveBudgetDay = (val: string) => {
+    const handleSaveBudgetDay = async (val: string) => {
         setBudgetStartDay(val);
-        updateSetting('budget_start_day', val);
+        await updateSetting('budget_start_day', val);
+        refreshBudgetStartDay();
     };
 
     const handleExport = async () => {
@@ -58,6 +63,10 @@ export default function SettingsPage() {
         }
     };
 
+    if (budgetStartDayError || updateIntervalError) {
+        return <PageError onRetry={() => { refreshBudgetStartDay(); refreshUpdateInterval(); }} />;
+    }
+
     return (
         <div className="mx-auto max-w-2xl px-4 py-8 space-y-8 pb-24">
 
@@ -68,7 +77,7 @@ export default function SettingsPage() {
 
             {/* Quick links */}
             <section className="space-y-2">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">頁面</h2>
+                <SectionLabel>頁面</SectionLabel>
                 <div className="rounded-2xl border border-border bg-card divide-y divide-border/50 overflow-hidden">
                     <Link href="/budget" className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors">
                         <div className="flex items-center gap-3">
@@ -96,7 +105,7 @@ export default function SettingsPage() {
 
             {/* Preferences */}
             <section className="space-y-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">偏好設定</h2>
+                <SectionLabel>偏好設定</SectionLabel>
                 <div className="rounded-2xl border border-border bg-card divide-y divide-border/50">
                     <div className="flex items-center justify-between px-4 py-3">
                         <div>
@@ -121,7 +130,7 @@ export default function SettingsPage() {
 
             {/* Budget cycle */}
             <section className="space-y-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">預算週期</h2>
+                <SectionLabel>預算週期</SectionLabel>
                 <div className="rounded-2xl border border-border bg-card divide-y divide-border/50">
                     <div className="flex items-center justify-between px-4 py-3">
                         <div>
@@ -150,7 +159,7 @@ export default function SettingsPage() {
 
             {/* Category visibility */}
             <section className="space-y-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">資產顯示設定</h2>
+                <SectionLabel>資產顯示設定</SectionLabel>
                 <div className="rounded-2xl border border-border bg-card px-4 py-3">
                     <CategoryVisibility />
                 </div>
@@ -158,7 +167,7 @@ export default function SettingsPage() {
 
             {/* Data management */}
             <section className="space-y-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">資料管理</h2>
+                <SectionLabel>資料管理</SectionLabel>
                 <div className="rounded-2xl border border-border bg-card divide-y divide-border/50">
                     <div className="flex items-center justify-between px-4 py-3">
                         <p className="text-sm font-medium">備份資料</p>

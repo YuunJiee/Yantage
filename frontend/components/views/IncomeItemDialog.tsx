@@ -9,6 +9,8 @@ import { useState, useEffect } from "react";
 import { IncomeItem } from "@/lib/types";
 import { Trash2 } from "lucide-react";
 import { createIncomeItem, updateIncomeItem, deleteIncomeItem } from "@/lib/api";
+import { useFormSubmit } from "@/lib/useFormSubmit";
+import { ConfirmDelete } from "@/components/ui/confirm-delete";
 
 interface IncomeItemDialogProps {
     open: boolean;
@@ -20,7 +22,6 @@ interface IncomeItemDialogProps {
 export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: IncomeItemDialogProps) {
     const [name, setName] = useState("");
     const [amount, setAmount] = useState("");
-    const [loading, setLoading] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
     useEffect(() => {
@@ -33,43 +34,31 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
         }
     }, [open, editingItem]);
 
-    const handleSave = async () => {
+    const { submit: handleSave, loading: saving } = useFormSubmit(async () => {
         if (!name || !amount) return;
-        try {
-            setLoading(true);
-            if (editingItem) {
-                await updateIncomeItem(editingItem.id, {
-                    name,
-                    amount: parseFloat(amount)
-                });
-            } else {
-                await createIncomeItem({
-                    name,
-                    amount: parseFloat(amount)
-                });
-            }
-            onSave();
-            onOpenChange(false);
-        } catch (error) {
-            console.error("Failed to save income:", error);
-        } finally {
-            setLoading(false);
+        if (editingItem) {
+            await updateIncomeItem(editingItem.id, {
+                name,
+                amount: parseFloat(amount)
+            });
+        } else {
+            await createIncomeItem({
+                name,
+                amount: parseFloat(amount)
+            });
         }
-    };
+        onSave();
+        onOpenChange(false);
+    });
 
-    const handleDelete = async () => {
+    const { submit: handleDelete, loading: deleting } = useFormSubmit(async () => {
         if (!editingItem) return;
-        try {
-            setLoading(true);
-            await deleteIncomeItem(editingItem.id);
-            onSave();
-            onOpenChange(false);
-        } catch (error) {
-            console.error("Failed to delete income:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+        await deleteIncomeItem(editingItem.id);
+        onSave();
+        onOpenChange(false);
+    });
+
+    const loading = saving || deleting;
 
     return (
         <Sheet
@@ -99,17 +88,11 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
             <div className="flex justify-between mt-4">
                 {editingItem ? (
                     confirmDelete ? (
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-destructive">確定刪除？</span>
-                            <button type="button" onClick={handleDelete} disabled={loading}
-                                className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50">
-                                {loading ? '刪除中…' : '確定'}
-                            </button>
-                            <button type="button" onClick={() => setConfirmDelete(false)}
-                                className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                                取消
-                            </button>
-                        </div>
+                        <ConfirmDelete
+                            onConfirm={() => handleDelete()}
+                            onCancel={() => setConfirmDelete(false)}
+                            loading={deleting}
+                        />
                     ) : (
                         <Button variant="ghost" onClick={() => setConfirmDelete(true)} disabled={loading}
                             className="px-3 text-destructive/70 hover:text-destructive hover:bg-transparent">

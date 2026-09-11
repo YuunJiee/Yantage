@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet } from "@/components/ui/sheet";
 import { Select } from "@/components/ui/select";
-import { Trash2, Plus, Key, Wallet, Globe, RefreshCw, Bitcoin, CheckCircle2, XCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Trash2, Plus, Wallet, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import { mutate } from 'swr';
 import { fetchIntegrations, createConnection, deleteConnection, syncProvider, type IntegrationConnectionResponse } from '@/lib/api';
+import { PROVIDERS, getProviderInfo } from '@/lib/providers';
+import { SWR_KEYS } from '@/lib/hooks';
 import { cn } from "@/lib/utils";
 
 export function IntegrationManager() {
@@ -18,7 +20,6 @@ export function IntegrationManager() {
     const [loading, setLoading] = useState(false);
     const [addError, setAddError] = useState('');
     const [syncStatus, setSyncStatus] = useState<Record<string, 'syncing' | 'ok' | 'error'>>({});
-    const router = useRouter();
 
     // New Connection State
     const [newType, setNewType] = useState<string>("pionex");
@@ -43,11 +44,7 @@ export function IntegrationManager() {
         setLoading(true);
         setAddError('');
         try {
-            let defaultName = `${newType} Connection`;
-            if (newType === 'max') defaultName = 'MAX';
-            else if (newType === 'pionex') defaultName = 'Pionex';
-            else if (newType === 'binance') defaultName = 'Binance';
-            else if (newType === 'wallet') defaultName = 'Wallet';
+            const defaultName = getProviderInfo(newType)?.defaultName ?? `${newType} Connection`;
 
             const payload = {
                 name: newName || defaultName,
@@ -90,7 +87,7 @@ export function IntegrationManager() {
         try {
             await syncProvider(provider);
             setSyncStatus(prev => ({ ...prev, [provider]: 'ok' }));
-            router.refresh();
+            mutate(SWR_KEYS.dashboard);
         } catch {
             setSyncStatus(prev => ({ ...prev, [provider]: 'error' }));
         }
@@ -113,14 +110,13 @@ export function IntegrationManager() {
             <div className="flex flex-col gap-4">
                 {connections.map(conn => {
                     const status = syncStatus[conn.provider];
+                    const providerInfo = getProviderInfo(conn.provider);
+                    const ProviderIcon = providerInfo?.icon ?? Wallet;
                     return (
                         <div key={conn.id} className="bg-card border border-border rounded-xl p-3 flex items-center justify-between shadow-sm">
                             <div className="flex items-center gap-3 overflow-hidden">
                                 <div className="p-2 bg-muted rounded-lg shrink-0">
-                                    {conn.provider === 'pionex' ? <Key className="w-5 h-5 text-orange-500" /> :
-                                        conn.provider === 'max' ? <Globe className="w-5 h-5 text-blue-500" /> :
-                                            conn.provider === 'binance' ? <Bitcoin className="w-5 h-5 text-yellow-500" /> :
-                                                <Wallet className="w-5 h-5 text-purple-500" />}
+                                    <ProviderIcon className={cn("w-5 h-5", providerInfo?.iconColor ?? 'text-purple-500')} />
                                 </div>
                                 <div className="min-w-0">
                                     <div className="font-semibold text-sm truncate">{conn.name}</div>
@@ -181,10 +177,9 @@ export function IntegrationManager() {
                     <div className="space-y-2">
                         <Label>提供者類型</Label>
                         <Select value={newType} onChange={(e) => setNewType(e.target.value)}>
-                            <option value="pionex">Pionex</option>
-                            <option value="binance">Binance</option>
-                            <option value="max">MAX Exchange</option>
-                            <option value="wallet">Web3 Wallet (EVM)</option>
+                            {PROVIDERS.map(p => (
+                                <option key={p.id} value={p.id}>{p.label}</option>
+                            ))}
                         </Select>
                     </div>
 

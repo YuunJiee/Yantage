@@ -22,9 +22,11 @@ import {
     fetchSetting,
     updateSetting,
     fetchSubscriptions,
+    fetchGoals,
+    fetchForecast,
     API_URL,
 } from './api';
-import type { DashboardData, BudgetCategory, IncomeItem, HistoryPoint, Subscription } from './types';
+import type { DashboardData, BudgetCategory, IncomeItem, HistoryPoint, Subscription, Goal, GoalForecast } from './types';
 import { DASHBOARD_CATEGORY_ORDER } from './constants';
 
 export type { HistoryPoint };
@@ -37,6 +39,8 @@ export const SWR_KEYS = {
     income:       `${API_URL}/income/items`,
     setting:      (key: string) => `${API_URL}/settings/${key}`,
     subscriptions: `${API_URL}/subscriptions/`,
+    goals:        `${API_URL}/goals/`,
+    forecast:     `${API_URL}/stats/forecast`,
 } as const;
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
@@ -46,11 +50,11 @@ export const SWR_KEYS = {
  * All components that display any asset data can call this — SWR deduplicates
  * them into a single network request per revalidation window.
  */
-export function useDashboard() {
+export function useDashboard(fallbackData?: DashboardData) {
     const { data, error, isLoading, mutate } = useSWR<DashboardData>(
         SWR_KEYS.dashboard,
         fetchDashboardData,
-        { refreshInterval: 60 * 60 * 1000 },
+        { refreshInterval: 60 * 60 * 1000, fallbackData },
     );
     return {
         dashboard: data,
@@ -128,6 +132,35 @@ export function useSubscriptions() {
         isLoading,
         isError: !!error,
         refresh: mutate,
+    };
+}
+
+/**
+ * Financial goals list.
+ */
+export function useGoals() {
+    const { data, error, isLoading, mutate } = useSWR<Goal[]>(SWR_KEYS.goals, fetchGoals);
+    return {
+        goals: data ?? [],
+        isLoading,
+        isError: !!error,
+        refresh: mutate,
+    };
+}
+
+/**
+ * Goal-forecast predictions, keyed by goal id for easy lookup.
+ */
+export function useForecast() {
+    const { data, error, isLoading } = useSWR(SWR_KEYS.forecast, fetchForecast);
+    const forecastsByGoalId = (data?.forecasts ?? []).reduce((acc, f: GoalForecast) => {
+        acc[f.goal_id] = f;
+        return acc;
+    }, {} as Record<number, GoalForecast>);
+    return {
+        forecastsByGoalId,
+        isLoading,
+        isError: !!error,
     };
 }
 

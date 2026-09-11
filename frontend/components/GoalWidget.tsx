@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { usePrivacy } from "@/components/PrivacyProvider";
 import { usePrivateMoney } from '@/lib/usePrivateMoney';
-import { fetchGoals, fetchForecast } from '@/lib/api';
-import type { Goal, GoalForecast, DashboardData, Asset } from '@/lib/types';
+import { useGoals, useForecast } from '@/lib/hooks';
+import type { Goal, DashboardData, Asset } from '@/lib/types';
 import { CATEGORY_ZH } from '@/lib/constants';
-import { Target } from 'lucide-react';
+import { Target, AlertTriangle } from 'lucide-react';
 
 function parseAllocation(data?: string | null): Record<string, number> | null {
     if (!data) return null;
@@ -19,28 +18,15 @@ function parseAllocation(data?: string | null): Record<string, number> | null {
 }
 
 
-export function GoalWidget({ dashboardData, refreshTrigger, onEditGoal, onAddGoal }: {
+export function GoalWidget({ dashboardData, onEditGoal, onAddGoal }: {
     dashboardData: DashboardData | null | undefined;
-    refreshTrigger: number;
     onEditGoal: (goal: Goal) => void;
     onAddGoal: () => void;
 }) {
     const { isPrivacyMode } = usePrivacy();
     const privateMoney = usePrivateMoney();
-    const [goals, setGoals] = useState<Goal[]>([]);
-    const [forecasts, setForecasts] = useState<Record<number, GoalForecast>>({});
-
-    useEffect(() => { fetchGoals().then(setGoals).catch(() => {}); }, [refreshTrigger]);
-
-    useEffect(() => {
-        fetchForecast()
-            .then(data => {
-                const map: Record<number, GoalForecast> = {};
-                data.forecasts.forEach((f: GoalForecast) => { map[f.goal_id] = f; });
-                setForecasts(map);
-            })
-            .catch(() => {});
-    }, [refreshTrigger]);
+    const { goals, isError: goalsError, refresh: refreshGoals } = useGoals();
+    const { forecastsByGoalId: forecasts } = useForecast();
 
     const netWorth = dashboardData?.net_worth || 0;
     const assets: Asset[] = dashboardData?.assets || [];
@@ -49,6 +35,16 @@ export function GoalWidget({ dashboardData, refreshTrigger, onEditGoal, onAddGoa
         assets.filter(a => a.include_in_net_worth !== false && a.category === cat).reduce((s, a) => s + (a.value_twd || 0), 0);
 
     const fmt = (n: number) => privateMoney(n, '••••', { notation: 'compact' });
+
+    if (goalsError) return (
+        <button
+            onClick={() => refreshGoals()}
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-destructive/40 text-destructive hover:border-destructive/60 transition-colors"
+        >
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span className="text-sm">目標載入失敗，點擊重試</span>
+        </button>
+    );
 
     if (goals.length === 0) return (
         <button
