@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CustomSelect } from "@/components/ui/custom-select";
-import { Download, Trash2, History, PieChart, ChevronRight, SquareSplitHorizontal } from 'lucide-react';
+import { Download, Trash2, History, PieChart, ChevronRight, SquareSplitHorizontal, Link as LinkIcon } from 'lucide-react';
 import { CategoryVisibility } from "@/components/CategoryVisibility";
+import { IntegrationDialog } from "@/components/IntegrationDialog";
 import { SectionLabel } from "@/components/ui/section-label";
 import { PageError } from "@/components/ui/skeleton";
 import { updateSetting, fetchDashboardData, apiFetch, API_URL } from '@/lib/api';
@@ -18,6 +19,7 @@ export default function SettingsPage() {
     const [budgetStartDay, setBudgetStartDay] = useState('1');
     const [updateInterval, setUpdateInterval] = useState('60');
     const [resetStep, setResetStep] = useState(0);
+    const [isIntegrationOpen, setIsIntegrationOpen] = useState(false);
 
     useEffect(() => {
         if (budgetStartDaySetting) setBudgetStartDay(budgetStartDaySetting);
@@ -100,6 +102,17 @@ export default function SettingsPage() {
                         </div>
                         <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
                     </Link>
+                    <button
+                        type="button"
+                        onClick={() => setIsIntegrationOpen(true)}
+                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors"
+                    >
+                        <div className="flex items-center gap-3">
+                            <LinkIcon className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">串接整合</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+                    </button>
                 </div>
             </section>
 
@@ -210,6 +223,10 @@ export default function SettingsPage() {
                 </div>
             </section>
 
+            <IntegrationDialog
+                isOpen={isIntegrationOpen}
+                onClose={() => setIsIntegrationOpen(false)}
+            />
         </div>
     );
 }
