@@ -1,25 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, GripVertical } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { usePrivateMoney } from '@/lib/usePrivateMoney';
 import { AssetActionDialog } from './AssetActionDialog';
-import { usePrivacy } from "@/components/PrivacyProvider";
-import { AssetIcon } from './IconPicker';
-import { getCategoryIconName } from '@/lib/iconHelper';
-import type { Asset, AssetGroup, Transaction } from '@/lib/types';
-
-const SUBCATEGORY_ZH: Record<string, string> = {
-    'Cash': '現金', 'E-Wallet': '電子錢包', 'Debit Card': '簽帳金融卡', 'Other': '其他',
-    'Fund': '基金', 'Stock': '股票', 'TW Stock': '台股', 'US Stock': '美股',
-    'Mutual Fund': '共同基金', 'Crypto': '加密貨幣', 'Token': '代幣', 'Coin': '幣',
-    'Stablecoin': '穩定幣', 'DeFi': 'DeFi', 'NFT': 'NFT',
-    'Other Investment': '其他投資', 'Real Estate': '房地產', 'Car': '車輛',
-    'Other Fixed Asset': '其他固定資產', 'Credit Card': '信用卡',
-    'Loan': '貸款', 'Payable': '應付帳款', 'Other Liability': '其他負債',
-};
+import { AssetRowIcon } from './AssetAccordion/AssetRowIcon';
+import { getAssetDisplayValue } from './AssetAccordion/helpers';
+import { getSubCategoryLabel } from '@/lib/constants';
+import type { Asset, AssetGroup } from '@/lib/types';
 
 const CATEGORY_DOT: Record<string, string> = {
     Fluid: 'bg-emerald-400',
@@ -36,21 +25,16 @@ interface AssetAccordionProps {
     totalAmount: number;
     assets: Asset[];
     color: string;
-    onTitleClick?: () => void;
     onActionClick?: () => void;
     actionIcon?: React.ReactNode;
-    className?: string;
-    isEditMode?: boolean;
     percentage?: number;
 }
 
-export function AssetAccordion({ category, title, totalAmount, assets, onTitleClick, onActionClick, actionIcon, className, isEditMode, percentage }: AssetAccordionProps) {
+export function AssetAccordion({ category, title, totalAmount, assets, onActionClick, actionIcon, percentage }: AssetAccordionProps) {
     const [isOpen, setIsOpen] = useState(true);
     const [isMounted, setIsMounted] = useState(false);
     const [expandedWeb3Groups, setExpandedWeb3Groups] = useState<Record<string, boolean>>({});
-    const { isPrivacyMode } = usePrivacy();
-
-    const getTranslatedSubCategory = (sub: string) => SUBCATEGORY_ZH[sub] ?? sub;
+    const privateMoney = usePrivateMoney();
 
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
     const [dialogMode, setDialogMode] = useState<'history' | 'edit' | 'adjust'>('history');
@@ -103,7 +87,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onTitleCl
                     icon: group[0].icon,
                     category: group[0].category,
                     sub_category: group[0].sub_category,
-                    totalValue: group.reduce((sum, a) => sum + (a.value_twd || ((a.current_price || 0) * (a.transactions?.reduce((acc, t) => acc + t.amount, 0) || 0))), 0),
+                    totalValue: group.reduce((sum, a) => sum + getAssetDisplayValue(a), 0),
                     last_updated_at: group.reduce((latest: string | null, a) => !latest || (a.last_updated_at && new Date(a.last_updated_at) > new Date(latest)) ? (a.last_updated_at ?? null) : latest, null),
                 });
             } else {
@@ -112,9 +96,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onTitleCl
         });
 
         const getVal = (item: typeof finalItems[number]) =>
-            item.isGroup
-                ? item.totalValue
-                : (item.value_twd || ((item.current_price || 0) * (item.transactions?.reduce((acc: number, t: { amount: number }) => acc + t.amount, 0) || 0)));
+            item.isGroup ? item.totalValue : getAssetDisplayValue(item);
         return finalItems.sort((a, b) => getVal(b) - getVal(a));
     })();
 
@@ -123,54 +105,21 @@ export function AssetAccordion({ category, title, totalAmount, assets, onTitleCl
         setExpandedWeb3Groups(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging
-    } = useSortable({
-        id: category,
-        disabled: !isEditMode
-    });
-
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        zIndex: isDragging ? 50 : 'auto',
-    };
-
     const dot = CATEGORY_DOT[category] ?? 'bg-gray-400';
 
     return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            className={cn(className, isDragging ? "opacity-50" : "")}
-        >
+        <div>
             {/* ── Category Header Row ─────────────────────────── */}
             <div
-                {...attributes}
-                {...(isEditMode ? listeners : {})}
-                onClick={() => { if (!isEditMode) toggleOpen(); }}
-                className={cn(
-                    "flex items-center gap-3 py-3 cursor-pointer select-none group",
-                    isEditMode && "touch-none cursor-grab active:cursor-grabbing"
-                )}
+                onClick={toggleOpen}
+                className="flex items-center gap-3 py-3 cursor-pointer select-none group"
             >
-                {isEditMode && <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />}
-
                 {/* Color dot */}
                 <div className={cn("w-2 h-2 rounded-full shrink-0", dot)} />
 
                 {/* Title */}
-                <h3
-                    className={cn("text-sm font-semibold text-foreground flex items-center gap-1.5", onTitleClick ? "hover:underline cursor-pointer" : "")}
-                    onClick={(e) => { if (onTitleClick) { e.stopPropagation(); onTitleClick(); } }}
-                >
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                     {title}
-                    {onTitleClick && <ChevronRight className="w-3.5 h-3.5 opacity-40" />}
                 </h3>
 
                 {/* Allocation % */}
@@ -192,7 +141,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onTitleCl
                     )}
                     {/* Total amount */}
                     <span className="text-sm font-semibold text-foreground tabular-nums">
-                        {isPrivacyMode ? '••••' : `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(totalAmount)}`}
+                        {privateMoney(totalAmount, '••••', { minimumFractionDigits: 0 })}
                     </span>
 
                     {/* Chevron */}
@@ -225,13 +174,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onTitleCl
                                                 onClick={(e) => toggleGroupExpand(e, item.groupKey)}
                                                 className="flex items-center gap-3 py-3 cursor-pointer hover:bg-muted/40 rounded-lg px-1 -mx-1 transition-colors"
                                             >
-                                                <div className="w-8 h-8 rounded-xl bg-muted/60 flex items-center justify-center shrink-0">
-                                                    {item.icon ? (
-                                                        <AssetIcon icon={item.icon} className="w-4 h-4" />
-                                                    ) : (
-                                                        <AssetIcon icon={getCategoryIconName(item.category, item.sub_category ?? undefined)} className="w-4 h-4" />
-                                                    )}
-                                                </div>
+                                                <AssetRowIcon icon={item.icon} category={item.category} subCategory={item.sub_category} />
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-1.5">
                                                         <span className="text-sm font-medium text-foreground truncate">{item.name}</span>
@@ -241,7 +184,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onTitleCl
                                                 </div>
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="text-sm font-semibold tabular-nums">
-                                                        {isPrivacyMode ? '••••' : `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(item.totalValue)}`}
+                                                        {privateMoney(item.totalValue, '••••', { maximumFractionDigits: 0 })}
                                                     </span>
                                                     <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground/50 transition-transform", isExpanded && "rotate-180")} />
                                                 </div>
@@ -250,7 +193,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onTitleCl
                                             {isExpanded && (
                                                 <div className="pl-4 border-l border-border/40 ml-4 mb-1">
                                                     {item.assets.map((asset) => {
-                                                        const value = (asset.value_twd !== undefined && asset.value_twd !== 0) ? asset.value_twd : ((asset.current_price || 0) * (asset.transactions?.reduce((acc: number, tx: Transaction) => acc + tx.amount, 0) || 0));
+                                                        const value = getAssetDisplayValue(asset);
                                                         return (
                                                             <div
                                                                 key={asset.id}
@@ -262,7 +205,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onTitleCl
                                                                     <span className="text-xs font-medium">{asset.network}</span>
                                                                 </div>
                                                                 <span className="text-xs font-semibold tabular-nums">
-                                                                    {isPrivacyMode ? '••••' : `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)}`}
+                                                                    {privateMoney(value, '••••', { maximumFractionDigits: 0 })}
                                                                 </span>
                                                             </div>
                                                         );
@@ -275,7 +218,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onTitleCl
                                 }
 
                                 const asset = item;
-                                const value = (asset.value_twd !== undefined && asset.value_twd !== 0) ? asset.value_twd : ((asset.current_price || 0) * (asset.transactions?.reduce((acc: number, tx: Transaction) => acc + tx.amount, 0) || 0));
+                                const value = getAssetDisplayValue(asset);
 
                                 return (
                                     <div
@@ -287,13 +230,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onTitleCl
                                         )}
                                     >
                                         {/* Icon */}
-                                        <div className="w-8 h-8 rounded-xl bg-muted/60 flex items-center justify-center shrink-0">
-                                            {asset.icon ? (
-                                                <AssetIcon icon={asset.icon} className="w-4 h-4" />
-                                            ) : (
-                                                <AssetIcon icon={getCategoryIconName(asset.category, asset.sub_category ?? undefined)} className="w-4 h-4" />
-                                            )}
-                                        </div>
+                                        <AssetRowIcon icon={asset.icon} category={asset.category} subCategory={asset.sub_category} />
 
                                         {/* Name + meta */}
                                         <div className="flex-1 min-w-0">
@@ -306,7 +243,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onTitleCl
                                             <div className="flex items-center gap-1.5 mt-0.5">
                                                 {(asset.ticker || asset.sub_category) && (
                                                     <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                                                        {asset.ticker || (asset.sub_category ? getTranslatedSubCategory(asset.sub_category) : '')}
+                                                        {asset.ticker || (asset.sub_category ? getSubCategoryLabel(asset.sub_category) : '')}
                                                     </span>
                                                 )}
                                                 {asset.last_updated_at && (asset.ticker || asset.sub_category) && (
@@ -326,7 +263,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onTitleCl
                                         {/* Right side: favorite + amount */}
                                         <div className="text-right shrink-0">
                                             <div className="text-sm font-semibold text-foreground tabular-nums">
-                                                {isPrivacyMode ? '••••' : `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)}`}
+                                                {privateMoney(value, '••••', { maximumFractionDigits: 0 })}
                                             </div>
                                             {totalAmount > 0 && asset.include_in_net_worth !== false && (
                                                 <div className="text-[11px] text-muted-foreground/60 tabular-nums">

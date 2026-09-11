@@ -9,6 +9,8 @@ import type { Asset } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { Trash2, ArrowLeft } from 'lucide-react';
 import { IconPicker, getDefaultIcon } from '../IconPicker';
+import { ConfirmDelete } from '@/components/ui/confirm-delete';
+import { SUB_CATEGORIES, getSubCategoryLabel } from '@/lib/constants';
 
 interface EditAssetViewProps {
     asset: Asset | null;
@@ -41,26 +43,6 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
         paymentDueDay: ''
     });
 
-    // Tag Removal: Tag items removed.
-
-    const subCategories: Record<string, string[]> = {
-        'Fluid': ['Cash', 'E-Wallet', 'Debit Card', 'Other'],
-        'Stock': ['TW Stock', 'US Stock', 'ETF', 'Bond', 'Mutual Fund', 'Other Investment'],
-        'Crypto': ['Coin', 'Token', 'Stablecoin', 'DeFi', 'NFT'],
-        'Fixed': ['Real Estate', 'Car', 'Other Fixed Asset'],
-        'Receivables': [],
-        'Liabilities': ['Credit Card', 'Loan', 'Payable', 'Other Liability']
-    };
-
-    const getSubCategoryLabel = (key: string) => ({
-        'Cash': '現金', 'E-Wallet': '電子錢包', 'Debit Card': '簽帳金融卡', 'Other': '其他',
-        'Coin': '幣', 'Token': '代幣', 'Stablecoin': '穩定幣', 'DeFi': 'DeFi', 'NFT': 'NFT',
-        'TW Stock': '台股', 'US Stock': '美股', 'ETF': 'ETF', 'Bond': '債券',
-        'Mutual Fund': '共同基金', 'Other Investment': '其他投資', 'Real Estate': '房地產',
-        'Car': '車輛', 'Other Fixed Asset': '其他固定資產', 'Credit Card': '信用卡',
-        'Loan': '貸款', 'Payable': '應付帳款', 'Other Liability': '其他負債'
-    } as Record<string,string>)[key] ?? key;
-
     useEffect(() => {
         if (asset) {
             setFormData({
@@ -73,7 +55,6 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                 manualAvgCost: asset.manual_avg_cost || '',
                 paymentDueDay: asset.payment_due_day || ''
             });
-            // setTags(asset.tags || []);
         }
     }, [asset]);
 
@@ -163,7 +144,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                             <CustomSelect
                                 value={formData.subCategory}
                                 onChange={(val) => setFormData({ ...formData, subCategory: val })}
-                                options={(subCategories[formData.category] || []).map(sub => ({ value: sub, label: getSubCategoryLabel(sub) }))}
+                                options={(SUB_CATEGORIES[formData.category] || []).map(sub => ({ value: sub, label: getSubCategoryLabel(sub) }))}
                             />
                         </div>
                     )}
@@ -233,17 +214,11 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                         )}
                         {asset.source !== 'max' && (
                             confirmDelete ? (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm text-destructive">確定刪除？</span>
-                                    <button type="button" onClick={handleDelete} disabled={loading}
-                                        className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50">
-                                        {loading ? '刪除中…' : '確定'}
-                                    </button>
-                                    <button type="button" onClick={() => setConfirmDelete(false)}
-                                        className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                                        取消
-                                    </button>
-                                </div>
+                                <ConfirmDelete
+                                    onConfirm={handleDelete}
+                                    onCancel={() => setConfirmDelete(false)}
+                                    loading={loading}
+                                />
                             ) : (
                                 <Button type="button" variant="ghost" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => setConfirmDelete(true)}>
                                     <Trash2 className="w-4 h-4 mr-1" /> 刪除
@@ -252,7 +227,6 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                         )}
                     </div>
                     <div className="flex gap-2">
-                        {/* <Button type="button" variant="ghost" onClick={onClose}>{t('cancel')}</Button> */}
                         {asset.source !== 'max' && (
                             <Button type="submit" disabled={loading}>
                                 {loading ? '載入中...' : '儲存變更'}

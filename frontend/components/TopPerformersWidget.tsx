@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { usePrivacy } from "@/components/PrivacyProvider";
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { cn, formatMoney } from "@/lib/utils";
 import type { Asset } from '@/lib/types';
 
 interface TopPerformersWidgetProps {
@@ -70,7 +70,7 @@ export function TopPerformersWidget({ assets }: TopPerformersWidgetProps) {
                                 </div>
                                 <div className="text-right shrink-0">
                                     <div className={cn('font-display text-[0.95rem] font-medium tabular-nums', isPositive ? 'text-trend-up' : 'text-trend-down')}>
-                                        {isPrivacyMode ? '••••' : `${isPositive ? '+' : ''}$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(pl)}`}
+                                        {isPrivacyMode ? '••••' : `${isPositive ? '+' : ''}${formatMoney(pl, { maximumFractionDigits: 0 })}`}
                                     </div>
                                     <div className={cn('text-[11px] font-medium tabular-nums', isPositive ? 'text-trend-up/70' : 'text-trend-down/70')}>
                                         {roi.toFixed(1)}%

@@ -54,6 +54,29 @@ export const CATEGORY_ZH: Record<string, string> = {
     Total: '總計',
 };
 
+/** Selectable sub-categories per asset category. */
+export const SUB_CATEGORIES: Record<string, string[]> = {
+    Fluid: ['Cash', 'E-Wallet', 'Debit Card', 'Other'],
+    Stock: ['TW Stock', 'US Stock', 'ETF', 'Bond', 'Mutual Fund', 'Other Investment'],
+    Crypto: ['Coin', 'Token', 'Stablecoin', 'DeFi', 'NFT'],
+    Fixed: ['Real Estate', 'Car', 'Other Fixed Asset'],
+    Receivables: [],
+    Liabilities: ['Credit Card', 'Loan', 'Payable', 'Other Liability'],
+};
+
+/** zh-TW display labels for sub-categories. */
+export const SUB_CATEGORY_ZH: Record<string, string> = {
+    'Cash': '現金', 'E-Wallet': '電子錢包', 'Debit Card': '簽帳金融卡', 'Other': '其他',
+    'Coin': '幣', 'Token': '代幣', 'Stablecoin': '穩定幣', 'DeFi': 'DeFi', 'NFT': 'NFT',
+    'TW Stock': '台股', 'US Stock': '美股', 'ETF': 'ETF', 'Bond': '債券',
+    'Mutual Fund': '共同基金', 'Fund': '基金', 'Stock': '股票', 'Crypto': '加密貨幣',
+    'Other Investment': '其他投資', 'Real Estate': '房地產', 'Car': '車輛',
+    'Other Fixed Asset': '其他固定資產', 'Credit Card': '信用卡',
+    'Loan': '貸款', 'Payable': '應付帳款', 'Other Liability': '其他負債',
+};
+
+export const getSubCategoryLabel = (key: string) => SUB_CATEGORY_ZH[key] ?? key;
+
 /** Time range options shared by the trend chart and history page. */
 export const CHART_RANGES = [
     { key: '30d', label: '30天' },

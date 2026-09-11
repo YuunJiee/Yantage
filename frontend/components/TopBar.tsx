@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Eye, EyeOff, Settings, ArrowLeft, RefreshCw } from 'lucide-react';
 import { usePrivacy } from '@/components/PrivacyProvider';
 import { useState } from 'react';
-import { API_URL } from '@/lib/api';
+import { refreshPrices } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 export function TopBar() {
@@ -19,7 +19,7 @@ export function TopBar() {
         if (refreshing) return;
         setRefreshing(true);
         try {
-            await fetch(`${API_URL}/system/refresh`, { method: 'POST' });
+            await refreshPrices();
             router.refresh();
         } finally {
             setRefreshing(false);

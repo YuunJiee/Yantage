@@ -12,16 +12,20 @@
  * automatically invalidate when you call `mutate(key)`.
  */
 
-import useSWR, { mutate as globalMutate } from 'swr';
+import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import {
     fetchDashboardData,
     fetchHistory,
     fetchBudgetCategories,
     fetchIncomeItems,
     fetchSetting,
+    updateSetting,
+    fetchSubscriptions,
     API_URL,
 } from './api';
-import type { DashboardData, BudgetCategory, IncomeItem, HistoryPoint } from './types';
+import type { DashboardData, BudgetCategory, IncomeItem, HistoryPoint, Subscription } from './types';
+import { DASHBOARD_CATEGORY_ORDER } from './constants';
 
 export type { HistoryPoint };
 
@@ -32,13 +36,8 @@ export const SWR_KEYS = {
     budgets:      `${API_URL}/budgets/categories`,
     income:       `${API_URL}/income/items`,
     setting:      (key: string) => `${API_URL}/settings/${key}`,
+    subscriptions: `${API_URL}/subscriptions/`,
 } as const;
-
-// ── Convenience re-validators (call after mutations) ─────────────────────────
-export const revalidateDashboard  = () => globalMutate(SWR_KEYS.dashboard);
-export const revalidateBudgets    = () => globalMutate(SWR_KEYS.budgets);
-export const revalidateIncome     = () => globalMutate(SWR_KEYS.income);
-export const revalidateHistory    = (range: string) => globalMutate(SWR_KEYS.history(range));
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 
@@ -116,6 +115,23 @@ export function useIncomeItems() {
 }
 
 /**
+ * Subscription split-tracking list.
+ */
+export function useSubscriptions() {
+    const { data, error, isLoading, mutate } = useSWR<Subscription[]>(
+        SWR_KEYS.subscriptions,
+        fetchSubscriptions,
+        { revalidateOnFocus: false },
+    );
+    return {
+        subscriptions: data ?? [],
+        isLoading,
+        isError: !!error,
+        refresh: mutate,
+    };
+}
+
+/**
  * A single persisted application setting.
  */
 export function useSetting(key: string) {
@@ -130,5 +146,47 @@ export function useSetting(key: string) {
         isError: !!error,
         refresh: mutate,
     };
+}
+
+/**
+ * Which asset categories show on the dashboard (the 'visible_categories' setting).
+ * Caches the last known value in localStorage so the dashboard can paint
+ * instantly on load instead of waiting for the settings fetch to resolve.
+ */
+export function useCategoryVisibility() {
+    const { value: visibleCatsRaw, refresh } = useSetting('visible_categories');
+    const [visibility, setVisibility] = useState<Record<string, boolean>>({});
+
+    useEffect(() => {
+        if (!visibleCatsRaw) {
+            const cached = localStorage.getItem('setting_visible_categories');
+            if (cached) {
+                try { setVisibility(JSON.parse(cached)); } catch { /* ignore */ }
+            } else {
+                const defaults: Record<string, boolean> = {};
+                DASHBOARD_CATEGORY_ORDER.forEach(c => defaults[c] = true);
+                setVisibility(defaults);
+            }
+            return;
+        }
+        try {
+            const parsed = JSON.parse(visibleCatsRaw);
+            setVisibility(parsed);
+            localStorage.setItem('setting_visible_categories', JSON.stringify(parsed));
+        } catch { /* ignore malformed JSON */ }
+    }, [visibleCatsRaw]);
+
+    const toggle = async (cat: string) => {
+        const next = { ...visibility, [cat]: !visibility[cat] };
+        setVisibility(next);
+        try {
+            await updateSetting('visible_categories', JSON.stringify(next));
+            refresh();
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    return { visibility, toggle, isLoading: visibleCatsRaw === undefined };
 }
 

@@ -3,7 +3,8 @@
 import { useState, useMemo } from "react";
 import { ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
 import { usePrivacy } from "@/components/PrivacyProvider";
-import { cn } from "@/lib/utils";
+import { cn, formatMoney } from "@/lib/utils";
+import { usePrivateMoney } from "@/lib/usePrivateMoney";
 import { useDashboard, useNetWorthHistory } from "@/lib/hooks";
 import type { Asset, Transaction } from "@/lib/types";
 import { TransactionEditDialog } from "@/components/TransactionEditDialog";
@@ -25,6 +26,7 @@ export default function HistoryPage() {
     const [range, setRange] = useState<string>('all');
     const [selectedTx, setSelectedTx] = useState<EnrichedTransaction | null>(null);
     const { isPrivacyMode } = usePrivacy();
+    const privateMoney = usePrivateMoney();
     const { assets, refresh, isLoading, isError } = useDashboard();
     const { history: allHistory } = useNetWorthHistory('all');
 
@@ -86,11 +88,10 @@ export default function HistoryPage() {
         if (txn.assetSource !== 'max') setSelectedTx(txn);
     };
 
-    const formatMoney = (n: number) =>
-        isPrivacyMode ? '••••••' : `$${new Intl.NumberFormat('en-US').format(Math.round(n))}`;
+    const displayNetWorth = (n: number) => privateMoney(Math.round(n), '••••••');
 
     const formatChange = (n: number) =>
-        isPrivacyMode ? '••••' : `${n >= 0 ? '+' : ''}$${new Intl.NumberFormat('en-US').format(Math.round(Math.abs(n)))}`;
+        isPrivacyMode ? '••••' : `${n >= 0 ? '+' : ''}${formatMoney(Math.round(Math.abs(n)))}`;
 
     return (
         <div className="mx-auto max-w-3xl px-4 py-8">
@@ -264,7 +265,7 @@ export default function HistoryPage() {
                                             </div>
                                         </div>
                                         <div className="font-display text-[1.05rem] font-medium tabular-nums tracking-tight">
-                                            {formatMoney(value)}
+                                            {displayNetWorth(value)}
                                         </div>
                                     </div>
                                 );

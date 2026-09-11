@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from "@/lib/utils";
-import { usePrivacy } from "@/components/PrivacyProvider";
+import { usePrivateMoney } from '@/lib/usePrivateMoney';
 import { useNetWorthHistory } from '@/lib/hooks';
 import { CHART_RANGES } from '@/lib/constants';
 
@@ -12,7 +12,7 @@ interface NetWorthTrendChartProps {
 }
 
 export function NetWorthTrendChart({ className }: NetWorthTrendChartProps) {
-    const { isPrivacyMode } = usePrivacy();
+    const privateMoney = usePrivateMoney();
     const [range, setRange] = useState<string>('30d');
     const [mounted, setMounted] = useState(false);
 
@@ -119,16 +119,12 @@ export function NetWorthTrendChart({ className }: NetWorthTrendChartProps) {
                                 tickLine={false}
                                 axisLine={false}
                                 tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                                tickFormatter={(val) =>
-                                    isPrivacyMode ? '••••' : '$' + new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 }).format(val)
-                                }
+                                tickFormatter={(val) => privateMoney(val, '••••', { notation: 'compact', maximumFractionDigits: 0 })}
                                 domain={['auto', 'auto']}
                             />
                             <Tooltip
                                 contentStyle={{ borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '11px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}
-                                formatter={(value: number | undefined) =>
-                                    isPrivacyMode ? '••••' : '$' + new Intl.NumberFormat('en-US').format(value ?? 0)
-                                }
+                                formatter={(value: number | undefined) => privateMoney(value ?? 0)}
                             />
                             <Area
                                 type="monotone"

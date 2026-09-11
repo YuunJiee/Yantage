@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { MoneyInput } from '@/components/ui/MoneyInput';
 import { CustomSelect } from "@/components/ui/custom-select";
 import { useRouter } from 'next/navigation';
 import { cn } from "@/lib/utils";
 
-import { API_URL } from '@/lib/api';
+import { createGoal, updateGoal, deleteGoal } from '@/lib/api';
+import { ConfirmDelete } from '@/components/ui/confirm-delete';
 import { Trash2 } from 'lucide-react';
 import type { Goal } from '@/lib/types';
 import { CATEGORY_ZH } from '@/lib/constants';
@@ -112,12 +112,11 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
                 };
 
         try {
-            const url = initialGoal ? `${API_URL}/goals/${initialGoal.id}` : `${API_URL}/goals/`;
-            await fetch(url, {
-                method: initialGoal ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
+            if (initialGoal) {
+                await updateGoal(initialGoal.id, payload);
+            } else {
+                await createGoal(payload);
+            }
             onClose();
             router.refresh();
         } catch (err) {
@@ -132,7 +131,7 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
         if (!initialGoal) return;
         setDeleting(true);
         try {
-            await fetch(`${API_URL}/goals/${initialGoal.id}`, { method: 'DELETE' });
+            await deleteGoal(initialGoal.id);
             onClose();
             router.refresh();
         } catch (err) {
@@ -241,17 +240,11 @@ export function GoalDialog({ isOpen, onClose, initialGoal }: GoalDialogProps) {
                 <div className="border-t border-border/20 pt-4 flex items-center justify-between">
                     {initialGoal ? (
                         confirmDelete ? (
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-destructive">確定刪除？</span>
-                                <button type="button" onClick={handleDelete} disabled={deleting}
-                                    className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50">
-                                    {deleting ? '刪除中…' : '確定'}
-                                </button>
-                                <button type="button" onClick={() => setConfirmDelete(false)}
-                                    className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                                    取消
-                                </button>
-                            </div>
+                            <ConfirmDelete
+                                onConfirm={handleDelete}
+                                onCancel={() => setConfirmDelete(false)}
+                                loading={deleting}
+                            />
                         ) : (
                             <button type="button" onClick={() => setConfirmDelete(true)}
                                 className="flex items-center gap-1.5 text-sm text-destructive/70 hover:text-destructive transition-colors">

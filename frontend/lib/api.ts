@@ -48,9 +48,46 @@ export const fetchHistory = (range = '1y') =>
 export const fetchGoals = () => apiFetch<Goal[]>('/goals/');
 export const fetchForecast = () => apiFetch<ForecastResponse>('/stats/forecast');
 
+export const createGoal = (data: {
+    name: string;
+    target_amount: number;
+    goal_type: string;
+    allocation_data?: string | null;
+}) => apiFetch<Goal>('/goals/', { method: 'POST', ...json(data) });
+
+export const updateGoal = (id: number, data: Partial<{
+    name: string;
+    target_amount: number;
+    goal_type: string;
+    allocation_data: string | null;
+}>) => apiFetch<Goal>(`/goals/${id}`, { method: 'PUT', ...json(data) });
+
+export const deleteGoal = (id: number) => apiFetch(`/goals/${id}`, { method: 'DELETE' });
+
 // ── Budget ────────────────────────────────────────────────────────────────────
 export const fetchBudgetCategories = () =>
     apiFetch<BudgetCategory[]>('/budgets/categories');
+
+export const createBudgetCategory = (data: {
+    name: string;
+    icon?: string | null;
+    budget_amount: number;
+    color?: string | null;
+    note?: string | null;
+    group_name?: string | null;
+}) => apiFetch<BudgetCategory>('/budgets/categories', { method: 'POST', ...json(data) });
+
+export const updateBudgetCategory = (id: number, data: Partial<{
+    name: string;
+    icon: string | null;
+    budget_amount: number;
+    color: string | null;
+    note: string | null;
+    group_name: string | null;
+}>) => apiFetch<BudgetCategory>(`/budgets/categories/${id}`, { method: 'PUT', ...json(data) });
+
+export const deleteBudgetCategory = (id: number) =>
+    apiFetch(`/budgets/categories/${id}`, { method: 'DELETE' });
 
 // ── Income ────────────────────────────────────────────────────────────────────
 export const fetchIncomeItems = () => apiFetch<IncomeItem[]>('/income/items');
@@ -104,7 +141,32 @@ export const deleteTransaction = (id: number) =>
     apiFetch(`/assets/transactions/${id}`, { method: 'DELETE' });
 
 // ── Integrations ──────────────────────────────────────────────────────────────
-export const fetchIntegrations = () => apiFetch('/integrations/');
+export interface IntegrationConnectionResponse {
+    id: number;
+    name: string;
+    provider: string;
+    api_key_masked?: string | null;
+    address?: string | null;
+    is_active: boolean;
+}
+
+export const fetchIntegrations = () => apiFetch<IntegrationConnectionResponse[]>('/integrations/');
+
+export const createConnection = (data: {
+    name: string;
+    provider: string;
+    api_key?: string | null;
+    api_secret?: string | null;
+    address?: string | null;
+}) => apiFetch<IntegrationConnectionResponse>('/integrations/', { method: 'POST', ...json(data) });
+
+export const deleteConnection = (id: number) => apiFetch(`/integrations/${id}`, { method: 'DELETE' });
+
+export const syncProvider = (provider: string) =>
+    apiFetch(`/integrations/sync/${provider}`, { method: 'POST' });
+
+// ── System ────────────────────────────────────────────────────────────────────
+export const refreshPrices = () => apiFetch('/system/refresh', { method: 'POST' });
 
 // ── Subscriptions ─────────────────────────────────────────────────────────────
 export const fetchSubscriptions = () => apiFetch<Subscription[]>('/subscriptions/');

@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { usePrivacy } from "@/components/PrivacyProvider";
-import { cn } from "@/lib/utils";
+import { cn, formatMoney } from "@/lib/utils";
 import type { Asset } from '@/lib/types';
 import { CATEGORY_ZH } from '@/lib/constants';
 
@@ -114,7 +114,7 @@ export function AssetAllocationWidget({ assets }: AssetAllocationWidgetProps) {
                                     const v = Number(value ?? 0);
                                     const percent = totalValue ? (v / totalValue * 100).toFixed(1) : 0;
                                     return [
-                                        `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(v)} (${percent}%)`,
+                                        `${formatMoney(v, { maximumFractionDigits: 0 })} (${percent}%)`,
                                         getTranslatedName(String(name ?? ''))
                                     ];
                                 }}

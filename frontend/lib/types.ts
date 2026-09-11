@@ -86,11 +86,6 @@ export interface DashboardData {
     updated_at: string;
 }
 
-export interface SystemSetting {
-    key: string;
-    value: string;
-}
-
 /** Wallet/exchange integration connection */
 export interface IntegrationConnection {
     id: number;

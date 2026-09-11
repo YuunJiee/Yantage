@@ -8,20 +8,11 @@ import { Sheet } from "@/components/ui/sheet";
 import { Select } from "@/components/ui/select";
 import { Trash2, Plus, Key, Wallet, Globe, RefreshCw, Bitcoin, CheckCircle2, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { API_URL } from '@/lib/api';
+import { fetchIntegrations, createConnection, deleteConnection, syncProvider, type IntegrationConnectionResponse } from '@/lib/api';
 import { cn } from "@/lib/utils";
 
-interface Connection {
-    id: number;
-    name: string;
-    provider: string;
-    api_key_masked?: string;
-    address?: string;
-    is_active: boolean;
-}
-
 export function IntegrationManager() {
-    const [connections, setConnections] = useState<Connection[]>([]);
+    const [connections, setConnections] = useState<IntegrationConnectionResponse[]>([]);
     const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -38,8 +29,7 @@ export function IntegrationManager() {
 
     const fetchConnections = async () => {
         try {
-            const res = await fetch(`${API_URL}/integrations/`);
-            if (res.ok) setConnections(await res.json());
+            setConnections(await fetchIntegrations());
         } catch (e) {
             console.error(e);
         }
@@ -67,24 +57,19 @@ export function IntegrationManager() {
                 address: newType === 'wallet' ? address : null
             };
 
-            const res = await fetch(`${API_URL}/integrations/`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                setIsOpen(false);
-                fetchConnections();
-                setNewName("");
-                setApiKey("");
-                setApiSecret("");
-                setAddress("");
-            } else {
+            await createConnection(payload);
+            setIsOpen(false);
+            fetchConnections();
+            setNewName("");
+            setApiKey("");
+            setApiSecret("");
+            setAddress("");
+        } catch (err) {
+            if (err instanceof Error && err.message.startsWith('API ')) {
                 setAddError("新增失敗，請確認 API Key 正確");
+            } else {
+                setAddError("連線錯誤，請稍後再試");
             }
-        } catch {
-            setAddError("連線錯誤，請稍後再試");
         } finally {
             setLoading(false);
         }
@@ -92,7 +77,7 @@ export function IntegrationManager() {
 
     const handleDelete = async (id: number) => {
         try {
-            await fetch(`${API_URL}/integrations/${id}`, { method: 'DELETE' });
+            await deleteConnection(id);
             setPendingDeleteId(null);
             fetchConnections();
         } catch (e) {
@@ -103,9 +88,9 @@ export function IntegrationManager() {
     const handleSync = async (provider: string) => {
         setSyncStatus(prev => ({ ...prev, [provider]: 'syncing' }));
         try {
-            const res = await fetch(`${API_URL}/integrations/sync/${provider}`, { method: 'POST' });
-            setSyncStatus(prev => ({ ...prev, [provider]: res.ok ? 'ok' : 'error' }));
-            if (res.ok) router.refresh();
+            await syncProvider(provider);
+            setSyncStatus(prev => ({ ...prev, [provider]: 'ok' }));
+            router.refresh();
         } catch {
             setSyncStatus(prev => ({ ...prev, [provider]: 'error' }));
         }

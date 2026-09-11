@@ -1,38 +1,30 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, Pencil, ShieldCheck, AlertTriangle, AlertCircle } from 'lucide-react';
-import { Sheet } from '@/components/ui/sheet';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Plus, Pencil, ShieldCheck, AlertTriangle, AlertCircle } from 'lucide-react';
 import { usePrivacy } from "@/components/PrivacyProvider";
-import { cn } from '@/lib/utils';
-import { API_URL } from '@/lib/api';
+import { usePrivateMoney } from '@/lib/usePrivateMoney';
+import { cn, formatMoney } from '@/lib/utils';
+import { createBudgetCategory, updateBudgetCategory, deleteBudgetCategory } from '@/lib/api';
 import { useBudgetCategories, useIncomeItems, useDashboard } from '@/lib/hooks';
-import { IconPicker, AssetIcon } from '@/components/IconPicker';
+import { AssetIcon } from '@/components/IconPicker';
 import { IncomeItemDialog } from '@/components/views/IncomeItemDialog';
-import { MoneyInput } from '@/components/ui/MoneyInput';
 import { PageError } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import type { BudgetCategory, IncomeItem } from '@/lib/types';
-
-const COLOR_OPTIONS = [
-    { value: 'emerald', bg: 'bg-emerald-100', text: 'text-emerald-600', bar: 'bg-emerald-500' },
-    { value: 'blue', bg: 'bg-blue-100', text: 'text-blue-600', bar: 'bg-blue-500' },
-    { value: 'purple', bg: 'bg-purple-100', text: 'text-purple-600', bar: 'bg-purple-500' },
-    { value: 'amber', bg: 'bg-amber-100', text: 'text-amber-600', bar: 'bg-amber-500' },
-    { value: 'pink', bg: 'bg-pink-100', text: 'text-pink-600', bar: 'bg-pink-500' },
-    { value: 'cyan', bg: 'bg-cyan-100', text: 'text-cyan-600', bar: 'bg-cyan-500' },
-    { value: 'orange', bg: 'bg-orange-100', text: 'text-orange-600', bar: 'bg-orange-500' },
-    { value: 'rose', bg: 'bg-rose-100', text: 'text-rose-600', bar: 'bg-rose-500' },
-];
-
-const getColors = (color: string | null) => COLOR_OPTIONS.find(c => c.value === color) ?? COLOR_OPTIONS[0];
-
-const MACRO_GROUPS = ['Fixed', 'Living', 'Investment', 'Growth', 'Unassigned'] as const;
-const GROUP_ZH: Record<string, string> = { Fixed: '固定生存', Living: '生活支出', Investment: '投資', Growth: '成長', Unassigned: '未分類' };
+import { getColors, MACRO_GROUPS, GROUP_ZH } from '@/components/budget/constants';
+import {
+    computeTotalIncome,
+    computeTotalBudget,
+    computeInvestmentRatio,
+    computeEmergencyFund,
+    groupBudgetsByMacroGroup,
+} from '@/components/budget/budgetMetrics';
+import { BudgetCategoryFormSheet, type BudgetFormState } from '@/components/budget/BudgetCategoryFormSheet';
 
 export default function BudgetPage() {
     const { isPrivacyMode } = usePrivacy();
+    const privateMoney = usePrivateMoney();
     const { categories, refresh: refreshBudgets, isLoading, isError } = useBudgetCategories();
     const { incomeItems, refresh: refreshIncome } = useIncomeItems();
     const { dashboard } = useDashboard();
@@ -43,8 +35,8 @@ export default function BudgetPage() {
     const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
     const [editingIncomeItem, setEditingIncomeItem] = useState<IncomeItem | null>(null);
 
-    const defaultBudgetForm = { name: '', icon: '', budget_amount: '', color: 'emerald', note: '', group_name: 'Unassigned' };
-    const [budgetForm, setBudgetForm] = useState(defaultBudgetForm);
+    const defaultBudgetForm: BudgetFormState = { name: '', icon: '', budget_amount: '', color: 'emerald', note: '', group_name: 'Unassigned' };
+    const [budgetForm, setBudgetForm] = useState<BudgetFormState>(defaultBudgetForm);
 
     const openAddBudget = () => { setEditingBudgetId(null); setBudgetForm(defaultBudgetForm); setIsBudgetDialogOpen(true); };
     const openEditBudget = (cat: BudgetCategory) => {
@@ -57,8 +49,11 @@ export default function BudgetPage() {
         e.preventDefault();
         const payload = { name: budgetForm.name, icon: budgetForm.icon || null, budget_amount: parseFloat(budgetForm.budget_amount), color: budgetForm.color || null, note: budgetForm.note || null, group_name: budgetForm.group_name || 'Unassigned' };
         try {
-            const url = editingBudgetId ? `${API_URL}/budgets/categories/${editingBudgetId}` : `${API_URL}/budgets/categories`;
-            await fetch(url, { method: editingBudgetId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (editingBudgetId) {
+                await updateBudgetCategory(editingBudgetId, payload);
+            } else {
+                await createBudgetCategory(payload);
+            }
             setIsBudgetDialogOpen(false);
             refreshBudgets();
         } catch (err) { console.error(err); }
@@ -66,25 +61,19 @@ export default function BudgetPage() {
 
     const handleBudgetDelete = async () => {
         if (!editingBudgetId) return;
-        await fetch(`${API_URL}/budgets/categories/${editingBudgetId}`, { method: 'DELETE' });
+        await deleteBudgetCategory(editingBudgetId);
         setIsBudgetDialogOpen(false);
         setConfirmBudgetDelete(false);
         refreshBudgets();
     };
 
     // Metrics
-    const totalIncome = incomeItems.reduce((s, i) => s + i.amount, 0);
-    const totalBudget = categories.reduce((s, c) => s + c.budget_amount, 0);
+    const totalIncome = computeTotalIncome(incomeItems);
+    const totalBudget = computeTotalBudget(categories);
     const deficit = totalIncome - totalBudget;
-
-    const investmentBudgets = categories.filter(c => c.group_name === 'Investment').reduce((s, c) => s + c.budget_amount, 0);
-    const investmentRatio = totalIncome > 0 ? (investmentBudgets / totalIncome) * 100 : 0;
-
-    const assets = dashboard?.assets ?? [];
-    const fluidAssetsTotal = assets.filter(a => a.category === 'Fluid' || a.category === 'Crypto').reduce((s, a) => s + (a.value_twd || 0), 0);
-    const survivalMonthlyCost = categories.filter(c => c.group_name === 'Fixed' || c.group_name === 'Living').reduce((s, c) => s + c.budget_amount, 0);
-    const emergencyFundTarget = survivalMonthlyCost * 3;
-    const emergencyFundProgress = emergencyFundTarget > 0 ? Math.min((fluidAssetsTotal / emergencyFundTarget) * 100, 100) : 0;
+    const investmentRatio = computeInvestmentRatio(categories, totalIncome);
+    const { fluidAssetsTotal, target: emergencyFundTarget, progress: emergencyFundProgress } =
+        computeEmergencyFund(categories, dashboard?.assets ?? []);
 
     const deficitStatus = deficit > 0
         ? { icon: ShieldCheck, color: 'text-emerald-600', label: '安全 · 可儲蓄' }
@@ -93,10 +82,7 @@ export default function BudgetPage() {
             : { icon: AlertCircle, color: 'text-red-500', label: '大赤字 · 危險' };
     const DeficitIcon = deficitStatus.icon;
 
-    const groupedBudgets = MACRO_GROUPS.reduce((acc, group) => {
-        acc[group] = categories.filter(c => (c.group_name || 'Unassigned') === group);
-        return acc;
-    }, {} as Record<string, BudgetCategory[]>);
+    const groupedBudgets = groupBudgetsByMacroGroup(categories);
 
     if (isLoading) return (
         <div className="mx-auto max-w-5xl px-4 py-8 space-y-6 animate-pulse">
@@ -126,13 +112,13 @@ export default function BudgetPage() {
                     <div className="pr-6">
                         <div className="text-[11px] text-muted-foreground mb-1.5">總收入</div>
                         <div className="font-display text-2xl font-medium tabular-nums leading-none">
-                            {isPrivacyMode ? '••••' : `$${totalIncome.toLocaleString()}`}
+                            {privateMoney(totalIncome)}
                         </div>
                     </div>
                     <div className="px-6">
                         <div className="text-[11px] text-muted-foreground mb-1.5">總預算</div>
                         <div className="font-display text-2xl font-medium tabular-nums leading-none">
-                            {isPrivacyMode ? '••••' : `$${totalBudget.toLocaleString()}`}
+                            {privateMoney(totalBudget)}
                         </div>
                     </div>
                     <div className="pl-6">
@@ -141,7 +127,7 @@ export default function BudgetPage() {
                             {deficitStatus.label}
                         </div>
                         <div className={cn('font-display text-2xl font-medium tabular-nums leading-none', deficitStatus.color)}>
-                            {isPrivacyMode ? '••••' : `$${Math.abs(deficit).toLocaleString()}`}
+                            {privateMoney(Math.abs(deficit))}
                         </div>
                     </div>
                 </div>
@@ -157,8 +143,8 @@ export default function BudgetPage() {
                             <div className="h-full bg-blue-500/70 rounded-full" style={{ width: `${emergencyFundProgress}%` }} />
                         </div>
                         <div className="flex justify-between text-[11px] text-muted-foreground/70 mt-1.5 tabular-nums">
-                            <span>{isPrivacyMode ? '••••' : `$${fluidAssetsTotal.toLocaleString()}`}</span>
-                            <span>{isPrivacyMode ? '••••' : `目標 $${emergencyFundTarget.toLocaleString()}`}</span>
+                            <span>{privateMoney(fluidAssetsTotal)}</span>
+                            <span>{isPrivacyMode ? '••••' : `目標 ${formatMoney(emergencyFundTarget)}`}</span>
                         </div>
                     </div>
                     <div className="rounded-2xl border border-border bg-card px-4 py-3">
@@ -200,7 +186,7 @@ export default function BudgetPage() {
                                 <div key={item.id} onClick={() => { setEditingIncomeItem(item); setIsIncomeDialogOpen(true); }} className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/40 transition-colors group">
                                     <span className="text-sm font-medium">{item.name}</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-sm font-semibold tabular-nums">{isPrivacyMode ? '••••' : `$${item.amount.toLocaleString()}`}</span>
+                                        <span className="text-sm font-semibold tabular-nums">{privateMoney(item.amount)}</span>
                                         <Pencil className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                                     </div>
                                 </div>
@@ -236,7 +222,7 @@ export default function BudgetPage() {
                                         <div className="flex items-center justify-between mb-3">
                                             <h3 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{GROUP_ZH[group]}</h3>
                                             <span className="text-xs text-muted-foreground tabular-nums">
-                                                {isPrivacyMode ? '••••' : `$${groupTotal.toLocaleString()}`}
+                                                {privateMoney(groupTotal)}
                                                 <span className="opacity-50 ml-1">({groupPct.toFixed(0)}%)</span>
                                             </span>
                                         </div>
@@ -262,7 +248,7 @@ export default function BudgetPage() {
                                                             </div>
                                                         </div>
                                                         <div className="font-display text-lg font-medium tabular-nums mb-2 leading-none">
-                                                            {isPrivacyMode ? '••••' : `$${cat.budget_amount.toLocaleString()}`}
+                                                            {privateMoney(cat.budget_amount)}
                                                         </div>
                                                         <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
                                                             <div className={cn('h-full rounded-full', colors.bar)} style={{ width: groupTotal > 0 ? `${(cat.budget_amount / groupTotal) * 100}%` : '0%' }} />
@@ -283,113 +269,17 @@ export default function BudgetPage() {
             <IncomeItemDialog open={isIncomeDialogOpen} onOpenChange={setIsIncomeDialogOpen} onSave={refreshIncome} editingItem={editingIncomeItem} />
 
             {/* Budget Dialog */}
-            <Sheet
+            <BudgetCategoryFormSheet
                 isOpen={isBudgetDialogOpen}
                 onClose={() => setIsBudgetDialogOpen(false)}
-                title={editingBudgetId ? '編輯類別' : '新增類別'}
-            >
-                <form onSubmit={handleBudgetSubmit} className="space-y-0">
-
-                    {/* ── 圖示 & 名稱 ──────────────────────────── */}
-                    <div className="pb-5">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">名稱</p>
-                        <div className="flex gap-3 items-end">
-                            <IconPicker
-                                value={budgetForm.icon}
-                                onChange={(icon: string) => setBudgetForm({ ...budgetForm, icon })}
-                                defaultIcon="ShoppingBag"
-                                className="shrink-0 h-11 w-11 rounded-xl border-border"
-                                iconClassName="w-5 h-5 text-foreground"
-                            />
-                            <Input
-                                placeholder="例如：食物、交通、娛樂"
-                                value={budgetForm.name}
-                                onChange={e => setBudgetForm({ ...budgetForm, name: e.target.value })}
-                                required
-                                className="flex-1"
-                            />
-                        </div>
-                    </div>
-
-                    {/* ── 大項分類 ──────────────────────────────── */}
-                    <div className="border-t border-border/20 py-5">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">大項分類</p>
-                        <div className="flex flex-wrap gap-1.5">
-                            {MACRO_GROUPS.map(g => (
-                                <button key={g} type="button" onClick={() => setBudgetForm({ ...budgetForm, group_name: g })}
-                                    className={cn(
-                                        'px-3 py-1.5 rounded-lg border text-xs font-medium transition-all duration-150',
-                                        budgetForm.group_name === g
-                                            ? 'bg-foreground text-background border-foreground'
-                                            : 'bg-transparent border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground'
-                                    )}>
-                                    {GROUP_ZH[g]}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* ── 預算金額 ──────────────────────────────── */}
-                    <div className="border-t border-border/20 py-5">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">每月預算（TWD）</p>
-                        <MoneyInput
-                            className="tabular-nums"
-                            value={budgetForm.budget_amount}
-                            onChange={e => setBudgetForm({ ...budgetForm, budget_amount: e.target.value })}
-                            required
-                        />
-                    </div>
-
-                    {/* ── 顏色 ─────────────────────────────────── */}
-                    <div className="border-t border-border/20 py-5">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">顏色標記</p>
-                        <div className="flex gap-2.5 flex-wrap">
-                            {COLOR_OPTIONS.map(c => (
-                                <button key={c.value} type="button" onClick={() => setBudgetForm({ ...budgetForm, color: c.value })}
-                                    className={cn('w-7 h-7 rounded-full transition-all border-2', c.bar,
-                                        budgetForm.color === c.value ? 'border-foreground scale-110' : 'border-transparent hover:scale-105'
-                                    )} />
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* ── 備註 ─────────────────────────────────── */}
-                    <div className="border-t border-border/20 py-5">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">備註（選填）</p>
-                        <Input
-                            placeholder="例如：包含外食和買菜"
-                            value={budgetForm.note}
-                            onChange={e => setBudgetForm({ ...budgetForm, note: e.target.value })}
-                        />
-                    </div>
-
-                    {/* ── 操作 ─────────────────────────────────── */}
-                    <div className="border-t border-border/20 pt-4 flex items-center justify-between">
-                        {editingBudgetId ? (
-                            confirmBudgetDelete ? (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm text-destructive">確定刪除？</span>
-                                    <button type="button" onClick={handleBudgetDelete}
-                                        className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors">
-                                        確定
-                                    </button>
-                                    <button type="button" onClick={() => setConfirmBudgetDelete(false)}
-                                        className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                                        取消
-                                    </button>
-                                </div>
-                            ) : (
-                                <button type="button" onClick={() => setConfirmBudgetDelete(true)}
-                                    className="flex items-center gap-1.5 text-sm text-destructive/70 hover:text-destructive transition-colors">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    刪除
-                                </button>
-                            )
-                        ) : <span />}
-                        <Button type="submit">{editingBudgetId ? '儲存變更' : '新增類別'}</Button>
-                    </div>
-                </form>
-            </Sheet>
+                editingBudgetId={editingBudgetId}
+                budgetForm={budgetForm}
+                setBudgetForm={setBudgetForm}
+                onSubmit={handleBudgetSubmit}
+                confirmDelete={confirmBudgetDelete}
+                setConfirmDelete={setConfirmBudgetDelete}
+                onDelete={handleBudgetDelete}
+            />
         </div>
     );
 }

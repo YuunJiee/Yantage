@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { usePrivacy } from "@/components/PrivacyProvider";
+import { usePrivateMoney } from '@/lib/usePrivateMoney';
 import { fetchGoals, fetchForecast } from '@/lib/api';
 import type { Goal, GoalForecast, DashboardData, Asset } from '@/lib/types';
 import { CATEGORY_ZH } from '@/lib/constants';
@@ -25,6 +26,7 @@ export function GoalWidget({ dashboardData, refreshTrigger, onEditGoal, onAddGoa
     onAddGoal: () => void;
 }) {
     const { isPrivacyMode } = usePrivacy();
+    const privateMoney = usePrivateMoney();
     const [goals, setGoals] = useState<Goal[]>([]);
     const [forecasts, setForecasts] = useState<Record<number, GoalForecast>>({});
 
@@ -46,7 +48,7 @@ export function GoalWidget({ dashboardData, refreshTrigger, onEditGoal, onAddGoa
     const categoryValue = (cat: string) =>
         assets.filter(a => a.include_in_net_worth !== false && a.category === cat).reduce((s, a) => s + (a.value_twd || 0), 0);
 
-    const fmt = (n: number) => isPrivacyMode ? '••••' : `$${new Intl.NumberFormat('en-US', { notation: 'compact' }).format(n)}`;
+    const fmt = (n: number) => privateMoney(n, '••••', { notation: 'compact' });
 
     if (goals.length === 0) return (
         <button
