@@ -7,6 +7,7 @@ from web3 import Web3
 from .base import ExchangeProvider
 from .wallet_config import ERC20_ABI, NETWORKS, POPULAR_TOKENS
 from ... import schemas
+from ...constants import AssetCategory, Provider
 from ...repositories.asset_repo import AssetRepository
 from ...repositories.connection_repo import ConnectionRepository
 from ...utils.icons import get_icon_for_ticker
@@ -33,10 +34,12 @@ def _fetch_erc20_balance(w3: Web3, contract_address: str, wallet_address: str, d
 
 
 class WalletProvider(ExchangeProvider):
+    sync_interval_minutes = 10
+
     def sync(self, db: Session) -> bool:
         logger.info("Starting Wallet Sync (Multi-Connection)...")
 
-        connections = ConnectionRepository(db).list_active_by_provider('wallet')
+        connections = ConnectionRepository(db).list_active_by_provider(Provider.WALLET.value)
 
         if not connections:
             logger.info("Wallet Sync skipped: No active wallet connections found.")
@@ -84,7 +87,7 @@ class WalletProvider(ExchangeProvider):
                     elif balance_fmt > 0:
                         new_asset = repo.create(schemas.AssetCreate(
                             name=asset_name, ticker=native_ticker,
-                            category="Crypto", sub_category="Crypto",
+                            category=AssetCategory.CRYPTO, sub_category="Crypto",
                             source="web3_wallet", include_in_net_worth=True,
                             network=network, connection_id=conn.id, decimals=18,
                         ))
@@ -121,7 +124,7 @@ class WalletProvider(ExchangeProvider):
                                 continue
 
                             logger.info(f"  FOUND NEW: {token['symbol']} on {network} ({bal_fmt})")
-                            target_icon = get_icon_for_ticker(token['symbol'], "Crypto")
+                            target_icon = get_icon_for_ticker(token['symbol'], AssetCategory.CRYPTO)
                             ticker = f"{token['symbol']}-USD"
                             current_price = None
                             try:
@@ -133,7 +136,7 @@ class WalletProvider(ExchangeProvider):
 
                             new_asset = repo.create(schemas.AssetCreate(
                                 name=token['symbol'], ticker=ticker,
-                                category="Crypto", sub_category="Token",
+                                category=AssetCategory.CRYPTO, sub_category="Token",
                                 source="web3_wallet", include_in_net_worth=True,
                                 network=network, connection_id=conn.id,
                                 contract_address=token['address'],

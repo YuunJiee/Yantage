@@ -4,11 +4,9 @@ from sqlalchemy.orm import Session
 
 from .. import models, scheduler
 from ..repositories.setting_repo import SettingRepository
-from ..utils.secrets import mask_secret_tail
+from ..utils.secrets import mask_secret_tail, looks_like_secret_key
 
-logger = logging.getLogger("uvicorn")
-
-_SECRET_KEY_MARKERS = ("key", "secret", "password", "token")
+logger = logging.getLogger(__name__)
 
 DEFAULT_SETTINGS: dict[str, str] = {
     "price_update_interval_minutes": "60",
@@ -29,7 +27,7 @@ def list_settings_masked(db: Session, skip: int = 0, limit: int = 100) -> list[m
     settings = SettingRepository(db).list_all(skip, limit)
     masked: list[models.SystemSetting] = []
     for s in settings:
-        if any(marker in s.key.lower() for marker in _SECRET_KEY_MARKERS):
+        if looks_like_secret_key(s.key):
             masked.append(models.SystemSetting(key=s.key, value=mask_secret_tail(s.value)))
         else:
             masked.append(s)

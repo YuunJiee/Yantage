@@ -4,6 +4,7 @@ from typing import List
 
 from .. import schemas, database
 from ..repositories.subscription_repo import SubscriptionRepository
+from ..services.subscription_service import SubscriptionService
 
 router = APIRouter(
     prefix="/api/subscriptions",
@@ -58,7 +59,7 @@ def delete_member(member_id: int, db: Session = Depends(database.get_db)):
 
 @router.post("/{subscription_id}/cycles", response_model=schemas.CollectionCycle)
 def create_cycle(subscription_id: int, data: schemas.CollectionCycleCreate, db: Session = Depends(database.get_db)):
-    result = SubscriptionRepository(db).create_cycle(subscription_id, data)
+    result = SubscriptionService(db).create_cycle(subscription_id, data)
     if not result:
         raise HTTPException(status_code=404, detail="Subscription not found")
     return result

@@ -1,0 +1,8 @@
+-r requirements.txt
+
+# Test dependencies — were installed ad-hoc in the dev environment but never
+# pinned anywhere; recorded here so `pip install -r requirements-dev.txt`
+# reproduces a working test environment from scratch.
+pytest>=9.0.0
+pytest-mock>=3.15.0
+httpx>=0.28.0

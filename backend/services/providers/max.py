@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from .base import ExchangeProvider
 from ... import schemas
+from ...constants import AssetCategory, Provider
 from ...repositories.asset_repo import AssetRepository
 from ...repositories.connection_repo import ConnectionRepository
 from ...utils.hmac_signing import sign_max_request
@@ -19,7 +20,7 @@ class MaxProvider(ExchangeProvider):
     def sync(self, db: Session) -> bool:
         logger.info("Starting MAX Sync...")
 
-        connections = ConnectionRepository(db).list_active_by_provider('max')
+        connections = ConnectionRepository(db).list_active_by_provider(Provider.MAX.value)
 
         if not connections:
             logger.info("MAX Sync skipped: No active connections found.")
@@ -104,7 +105,7 @@ class MaxProvider(ExchangeProvider):
                             pass
 
                     target_icon = get_icon_for_ticker(
-                        ticker, "Crypto" if ticker != 'TWD' else "Fluid"
+                        ticker, AssetCategory.CRYPTO if ticker != 'TWD' else AssetCategory.FLUID
                     )
 
                     db_asset = repo.find_by_connection(conn.id, ticker=ticker)
@@ -123,12 +124,12 @@ class MaxProvider(ExchangeProvider):
                         repo.record_balance_diff(db_asset, amount)
                     else:
                         logger.info(f"  Creating new MAX asset: {ticker}")
-                        category     = "Fluid"  if ticker == 'TWD' else "Crypto"
+                        category     = AssetCategory.FLUID if ticker == 'TWD' else AssetCategory.CRYPTO
                         sub_category = "Cash"   if ticker == 'TWD' else "Crypto"
                         new_asset = repo.create(schemas.AssetCreate(
                             name=f"{ticker} ({conn.name})",
                             ticker=ticker, category=category, sub_category=sub_category,
-                            source="max", icon=target_icon, include_in_net_worth=True,
+                            source=Provider.MAX.value, icon=target_icon, include_in_net_worth=True,
                             current_price=current_price,
                             manual_avg_cost=avg_cost if avg_cost > 0 else None,
                             connection_id=conn.id,

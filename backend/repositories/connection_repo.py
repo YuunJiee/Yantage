@@ -21,7 +21,7 @@ class ConnectionRepository:
         return self.db.query(models.CryptoConnection).filter(models.CryptoConnection.id == conn_id).first()
 
     def create(self, data: schemas.ConnectionCreate) -> models.CryptoConnection:
-        db_conn = models.CryptoConnection(**data.dict())
+        db_conn = models.CryptoConnection(**data.model_dump())
         self.db.add(db_conn)
         self.db.commit()
         self.db.refresh(db_conn)

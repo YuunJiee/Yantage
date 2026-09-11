@@ -57,7 +57,7 @@ class SubscriptionRepository:
         sub = self.db.query(models.Subscription).filter(models.Subscription.id == subscription_id).first()
         if not sub:
             return None
-        for key, value in data.dict(exclude_unset=True).items():
+        for key, value in data.model_dump(exclude_unset=True).items():
             setattr(sub, key, value)
         self.db.commit()
         return self.get(subscription_id)
@@ -91,14 +91,20 @@ class SubscriptionRepository:
         return True
 
     # --- Cycles ---
+    # Note: there's no create_cycle() here anymore — auto-creating a
+    # CyclePayment per member is a business rule, not a SQL operation, so
+    # it now lives in SubscriptionService.create_cycle(). This repo only
+    # exposes the plain-SQL primitives that service composes.
 
-    def create_cycle(self, subscription_id: int, data: schemas.CollectionCycleCreate) -> models.CollectionCycle | None:
-        sub = self.db.query(models.Subscription).options(joinedload(models.Subscription.members)).filter(
-            models.Subscription.id == subscription_id
-        ).first()
-        if not sub:
-            return None
+    def get_with_members(self, subscription_id: int) -> models.Subscription | None:
+        return (
+            self.db.query(models.Subscription)
+            .options(joinedload(models.Subscription.members))
+            .filter(models.Subscription.id == subscription_id)
+            .first()
+        )
 
+    def create_cycle_row(self, subscription_id: int, data: schemas.CollectionCycleCreate) -> models.CollectionCycle:
         cycle = models.CollectionCycle(
             subscription_id=subscription_id,
             cycle_start=data.cycle_start,
@@ -107,19 +113,23 @@ class SubscriptionRepository:
         )
         self.db.add(cycle)
         self.db.flush()
+        return cycle
 
-        # 自動為每位成員建立未付款記錄
-        for member in sub.members:
-            self.db.add(models.CyclePayment(cycle_id=cycle.id, member_id=member.id))
+    def create_payment_row(self, cycle_id: int, member_id: int) -> models.CyclePayment:
+        payment = models.CyclePayment(cycle_id=cycle_id, member_id=member_id)
+        self.db.add(payment)
+        return payment
 
-        self.db.commit()
-        self.db.refresh(cycle)
+    def get_cycle(self, cycle_id: int) -> models.CollectionCycle | None:
         return (
             self.db.query(models.CollectionCycle)
             .options(joinedload(models.CollectionCycle.payments).joinedload(models.CyclePayment.member))
-            .filter(models.CollectionCycle.id == cycle.id)
+            .filter(models.CollectionCycle.id == cycle_id)
             .first()
         )
+
+    def commit(self) -> None:
+        self.db.commit()
 
     def delete_cycle(self, cycle_id: int) -> bool:
         cycle = self.db.query(models.CollectionCycle).filter(models.CollectionCycle.id == cycle_id).first()
@@ -135,7 +145,7 @@ class SubscriptionRepository:
         payment = self.db.query(models.CyclePayment).filter(models.CyclePayment.id == payment_id).first()
         if not payment:
             return None
-        for key, value in data.dict(exclude_unset=True).items():
+        for key, value in data.model_dump(exclude_unset=True).items():
             setattr(payment, key, value)
         self.db.commit()
         self.db.refresh(payment)

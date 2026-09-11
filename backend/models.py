@@ -40,16 +40,16 @@ class Asset(Base):
     decimals = Column(Integer, default=18) # for Web3 precision
 
     # Multi-Integration
-    connection_id = Column(Integer, ForeignKey("crypto_connections.id"), nullable=True)
+    connection_id = Column(Integer, ForeignKey("crypto_connections.id"), nullable=True, index=True)
     connection = relationship("CryptoConnection", back_populates="assets")
 
-    transactions = relationship("Transaction", back_populates="asset")
+    transactions = relationship("Transaction", back_populates="asset", cascade="all, delete-orphan")
 
 class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
-    asset_id = Column(Integer, ForeignKey("assets.id"))
+    asset_id = Column(Integer, ForeignKey("assets.id"), index=True)
     amount = Column(Float) # Quantity
     buy_price = Column(Float) # Average Cost
     date = Column(DateTime, default=datetime.now)
@@ -130,7 +130,7 @@ class SubscriptionMember(Base):
     __tablename__ = "subscription_members"
 
     id = Column(Integer, primary_key=True, index=True)
-    subscription_id = Column(Integer, ForeignKey("subscriptions.id"))
+    subscription_id = Column(Integer, ForeignKey("subscriptions.id"), index=True)
     name = Column(String)
 
     subscription = relationship("Subscription", back_populates="members")
@@ -141,7 +141,7 @@ class CollectionCycle(Base):
     __tablename__ = "collection_cycles"
 
     id = Column(Integer, primary_key=True, index=True)
-    subscription_id = Column(Integer, ForeignKey("subscriptions.id"))
+    subscription_id = Column(Integer, ForeignKey("subscriptions.id"), index=True)
     cycle_start = Column(String)          # YYYY-MM-DD
     note = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
@@ -154,8 +154,8 @@ class CyclePayment(Base):
     __tablename__ = "cycle_payments"
 
     id = Column(Integer, primary_key=True, index=True)
-    cycle_id = Column(Integer, ForeignKey("collection_cycles.id"))
-    member_id = Column(Integer, ForeignKey("subscription_members.id"))
+    cycle_id = Column(Integer, ForeignKey("collection_cycles.id"), index=True)
+    member_id = Column(Integer, ForeignKey("subscription_members.id"), index=True)
     paid_at = Column(String, nullable=True)   # YYYY-MM-DD，null = 未付
     note = Column(String, nullable=True)
 

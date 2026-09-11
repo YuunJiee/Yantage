@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from .base import ExchangeProvider
 from .common import sync_asset_balance
+from ...constants import AssetCategory, Provider
 from ...repositories.connection_repo import ConnectionRepository
 from ...utils.icons import get_icon_for_ticker
 from ..exchange_rate_service import get_usdt_twd_rate
@@ -15,7 +16,7 @@ class BinanceProvider(ExchangeProvider):
     def sync(self, db: Session) -> bool:
         logger.info("Starting Binance Sync...")
 
-        connections = ConnectionRepository(db).list_active_by_provider('binance')
+        connections = ConnectionRepository(db).list_active_by_provider(Provider.BINANCE.value)
 
         if not connections:
             logger.info("Binance Sync skipped: No active connections found.")
@@ -65,8 +66,8 @@ class BinanceProvider(ExchangeProvider):
                         ticker=coin,
                         target_name=f"{coin} ({clean_conn_name})",
                         current_price=current_price_usd,
-                        source="binance",
-                        icon=get_icon_for_ticker(coin, "Crypto"),
+                        source=Provider.BINANCE.value,
+                        icon=get_icon_for_ticker(coin, AssetCategory.CRYPTO),
                         amount=amount,
                     )
 

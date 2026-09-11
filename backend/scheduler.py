@@ -39,11 +39,6 @@ def _run_provider_sync(name: str) -> None:
         db.close()
 
 
-def run_max_sync():     _run_provider_sync("max")
-def run_pionex_sync():  _run_provider_sync("pionex")
-def run_binance_sync(): _run_provider_sync("binance")
-def run_wallet_sync():  _run_provider_sync("wallet")
-
 def start_scheduler():
     # Helper to get interval from DB
     db = SessionLocal()
@@ -63,10 +58,11 @@ def start_scheduler():
 
     if not scheduler.running:
         scheduler.add_job(run_price_updates, 'interval', minutes=interval_minutes, id='price_update_job', **_job_defaults)
-        scheduler.add_job(run_max_sync, 'interval', minutes=60, id='max_sync_job', **_job_defaults)
-        scheduler.add_job(run_pionex_sync, 'interval', minutes=60, id='pionex_sync_job', **_job_defaults)
-        scheduler.add_job(run_binance_sync, 'interval', minutes=60, id='binance_sync_job', **_job_defaults)
-        scheduler.add_job(run_wallet_sync, 'interval', minutes=10, id='wallet_sync_job', **_job_defaults)
+        for name, provider in PROVIDERS.items():
+            scheduler.add_job(
+                lambda name=name: _run_provider_sync(name), 'interval',
+                minutes=provider.sync_interval_minutes, id=f'{name}_sync_job', **_job_defaults,
+            )
         # Daily midnight snapshot ensures history data exists even on days with no manual refresh
         scheduler.add_job(lambda: run_price_updates(), 'cron', hour=0, minute=5, id='daily_snapshot_job', **_job_defaults)
         scheduler.start()

@@ -120,7 +120,7 @@ class AssetRepository:
     def update(self, asset_id: int, data: schemas.AssetUpdate) -> models.Asset | None:
         db_asset = self.db.query(models.Asset).filter(models.Asset.id == asset_id).first()
         if db_asset:
-            for key, value in data.dict(exclude_unset=True).items():
+            for key, value in data.model_dump(exclude_unset=True).items():
                 setattr(db_asset, key, value)
             db_asset.last_updated_at = datetime.now()
             self.db.commit()
@@ -176,7 +176,7 @@ class AssetRepository:
     def update_transaction(self, transaction_id: int, data: schemas.TransactionUpdate) -> models.Transaction | None:
         tx = self.db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
         if tx:
-            for key, value in data.dict(exclude_unset=True).items():
+            for key, value in data.model_dump(exclude_unset=True).items():
                 setattr(tx, key, value)
             self.db.commit()
             self.db.refresh(tx)

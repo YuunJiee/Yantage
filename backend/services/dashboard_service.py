@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from .. import schemas
 from ..services.asset_service import AssetService
 from ..services.exchange_rate_service import get_usdt_twd_rate
+from ..utils.category_rules import is_negative_category
 
 
 def calculate_dashboard_metrics(db: Session) -> schemas.DashboardData:
@@ -18,7 +19,7 @@ def calculate_dashboard_metrics(db: Session) -> schemas.DashboardData:
         asset_cost = asset_market_value - (asset.unrealized_pl or 0.0)
 
         if asset.include_in_net_worth:
-            if asset.category == "Liabilities":
+            if is_negative_category(asset.category):
                 total_market_value -= asset_market_value
                 total_cost -= asset_cost
             else:

@@ -17,8 +17,19 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _column_exists(table: str, column: str) -> bool:
+    bind = op.get_bind()
+    cols = [c["name"] for c in sa.inspect(bind).get_columns(table)]
+    return column in cols
+
+
 def upgrade() -> None:
-    op.add_column('goals', sa.Column('allocation_data', sa.String(), nullable=True))
+    # Guarded: on a fresh install, migration 0001's create_all() already
+    # creates this column by reading the current models.py, since Goal
+    # already declares allocation_data — this migration only needs to add
+    # it for databases created before that column existed.
+    if not _column_exists("goals", "allocation_data"):
+        op.add_column('goals', sa.Column('allocation_data', sa.String(), nullable=True))
 
     # Migrate existing ASSET_ALLOCATION goals: copy description → allocation_data,
     # then clear description (it was being used as data storage, not a human note).

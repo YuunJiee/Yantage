@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 import logging
 import os
@@ -68,6 +70,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ── Centralized error handling ──────────────────────────────────────────────
+# Routers don't need their own try/except→500 boilerplate for unexpected
+# failures — these two handlers catch anything that reaches them, log it,
+# and return a uniform response instead of a raw traceback.
+
+@app.exception_handler(SQLAlchemyError)
+async def db_exception_handler(request: Request, exc: SQLAlchemyError):
+    logger.exception(f"Database error on {request.method} {request.url.path}")
+    return JSONResponse(status_code=500, content={"detail": "Database error"})
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception(f"Unhandled error on {request.method} {request.url.path}")
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
 
 from .routers import dashboard, assets, stats, goals, budgets, settings, system, integrations, income, subscriptions
 

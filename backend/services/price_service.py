@@ -6,6 +6,7 @@ import ccxt
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sqlalchemy.orm import Session
 
+from ..constants import AssetCategory
 from ..repositories.asset_repo import AssetRepository
 
 logger = logging.getLogger(__name__)
@@ -55,12 +56,12 @@ def update_prices(db: Session) -> None:
     stock_jobs:  list[tuple[int, str]] = []
 
     for asset in assets:
-        is_crypto = asset.category == "Crypto" or (
+        is_crypto = asset.category == AssetCategory.CRYPTO or (
             asset.sub_category and "Crypto" in asset.sub_category
         )
         if is_crypto and asset.ticker:
             crypto_jobs.append((asset.id, asset.ticker))
-        elif asset.category == "Stock" and asset.ticker:
+        elif asset.category == AssetCategory.STOCK and asset.ticker:
             stock_jobs.append((asset.id, asset.ticker))
 
     price_results: dict[int, float] = {}

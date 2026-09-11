@@ -32,3 +32,36 @@ def test_list_all_roi_computed(db):
     asset = repo.create(schemas.AssetCreate(name="Stock", category="Stock", ticker="2330.TW", current_price=1_000.0))
     repo.create_transaction(_transaction(amount=1.0, buy_price=800.0), asset.id)
     assert AssetService(db).list_all()[0].roi == pytest.approx(25.0)
+
+
+def test_get_returns_enriched_asset(db):
+    repo = AssetRepository(db)
+    asset = repo.create(schemas.AssetCreate(name="Cash", category="Fluid", current_price=1.0))
+    repo.create_transaction(_transaction(amount=500.0, buy_price=1.0), asset.id)
+    fetched = AssetService(db).get(asset.id)
+    assert fetched.value_twd == pytest.approx(500.0)
+
+
+def test_get_missing_returns_none(db):
+    assert AssetService(db).get(9999) is None
+
+
+def test_create_returns_enriched_asset(db):
+    created = AssetService(db).create(schemas.AssetCreate(name="Savings", category="Fluid", current_price=1.0))
+    assert created.value_twd == pytest.approx(0.0)
+    assert created.unrealized_pl == pytest.approx(0.0)
+    assert created.roi == pytest.approx(0.0)
+
+
+def test_update_returns_enriched_asset(db):
+    repo = AssetRepository(db)
+    asset = repo.create(schemas.AssetCreate(name="Cash", category="Fluid", current_price=1.0))
+    repo.create_transaction(_transaction(amount=200.0, buy_price=1.0), asset.id)
+
+    updated = AssetService(db).update(asset.id, schemas.AssetUpdate(name="Renamed"))
+    assert updated.name == "Renamed"
+    assert updated.value_twd == pytest.approx(200.0)
+
+
+def test_update_missing_returns_none(db):
+    assert AssetService(db).update(9999, schemas.AssetUpdate(name="X")) is None

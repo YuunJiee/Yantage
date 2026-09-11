@@ -2,6 +2,8 @@ from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 
+from .constants import AssetCategory, Provider, GoalType
+
 # Transaction Schemas
 class TransactionBase(BaseModel):
     amount: float
@@ -18,6 +20,7 @@ class TransactionUpdate(BaseModel):
     buy_price: Optional[float] = None
     date: Optional[datetime] = None
     is_transfer: Optional[bool] = None
+    note: Optional[str] = None
 
 class Transaction(TransactionBase):
     id: int
@@ -30,7 +33,7 @@ class Transaction(TransactionBase):
 class AssetBase(BaseModel):
     name: str
     ticker: Optional[str] = None
-    category: str
+    category: AssetCategory
     sub_category: Optional[str] = None
     is_favorite: Optional[bool] = False
     include_in_net_worth: Optional[bool] = True
@@ -55,18 +58,24 @@ class AssetCreate(AssetBase):
 class AssetUpdate(BaseModel):
     name: Optional[str] = None
     ticker: Optional[str] = None
-    category: Optional[str] = None
+    category: Optional[AssetCategory] = None
+    sub_category: Optional[str] = None
     is_favorite: Optional[bool] = None
     include_in_net_worth: Optional[bool] = None
     icon: Optional[str] = None
     manual_avg_cost: Optional[float] = None
     payment_due_day: Optional[int] = None
+    source: Optional[str] = None
+    network: Optional[str] = None
+    contract_address: Optional[str] = None
+    decimals: Optional[int] = None
+    connection_id: Optional[int] = None
 
 # Crypto Connection Schema
 class CryptoConnection(BaseModel):
     id: int
     name: str # e.g. "My Pionex"
-    provider: str # "pionex", "max"
+    provider: Provider
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -91,7 +100,7 @@ class DashboardData(BaseModel):
 class GoalBase(BaseModel):
     name: str
     target_amount: float
-    goal_type: str          # "NET_WORTH" | "ASSET_ALLOCATION"
+    goal_type: GoalType
     currency: Optional[str] = "TWD"
     description: Optional[str] = None       # human-readable note
     allocation_data: Optional[str] = None   # JSON: {"Stock": 60, "Fluid": 40} for ASSET_ALLOCATION
@@ -102,7 +111,8 @@ class GoalCreate(GoalBase):
 class GoalUpdate(BaseModel):
     name: Optional[str] = None
     target_amount: Optional[float] = None
-    goal_type: Optional[str] = None
+    goal_type: Optional[GoalType] = None
+    currency: Optional[str] = None
     description: Optional[str] = None
     allocation_data: Optional[str] = None
 
@@ -180,7 +190,7 @@ class TickerLookupResult(BaseModel):
 
 class ConnectionCreate(BaseModel):
     name: str
-    provider: str  # "pionex" | "max" | "binance" | "wallet"
+    provider: Provider
     api_key: Optional[str] = None
     api_secret: Optional[str] = None
     address: Optional[str] = None
@@ -188,7 +198,7 @@ class ConnectionCreate(BaseModel):
 class ConnectionResponse(BaseModel):
     id: int
     name: str
-    provider: str
+    provider: Provider
     api_key_masked: Optional[str] = None
     address: Optional[str] = None
     is_active: bool

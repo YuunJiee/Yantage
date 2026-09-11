@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from .base import ExchangeProvider
 from .common import sync_asset_balance
+from ...constants import AssetCategory, Provider
 from ...repositories.connection_repo import ConnectionRepository
 from ...utils.hmac_signing import sign_pionex_request
 from ...utils.icons import get_icon_for_ticker
@@ -17,7 +18,7 @@ class PionexProvider(ExchangeProvider):
     def sync(self, db: Session) -> bool:
         logger.info("Starting Pionex Sync...")
 
-        connections = ConnectionRepository(db).list_active_by_provider('pionex')
+        connections = ConnectionRepository(db).list_active_by_provider(Provider.PIONEX.value)
 
         if not connections:
             logger.info("Pionex Sync skipped: No active connections found.")
@@ -79,8 +80,8 @@ class PionexProvider(ExchangeProvider):
                         ticker=ticker,
                         target_name=f"{ticker} ({clean_conn_name})",
                         current_price=current_price,
-                        source="pionex",
-                        icon=get_icon_for_ticker(ticker, "Crypto"),
+                        source=Provider.PIONEX.value,
+                        icon=get_icon_for_ticker(ticker, AssetCategory.CRYPTO),
                         amount=amount,
                     )
 

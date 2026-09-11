@@ -16,8 +16,16 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _table_exists(table: str) -> bool:
+    bind = op.get_bind()
+    return table in sa.inspect(bind).get_table_names()
+
+
 def upgrade() -> None:
-    op.drop_table('alerts')
+    # Guarded: on a fresh install, models.py no longer declares an Alert
+    # model, so migration 0001's create_all() never creates this table.
+    if _table_exists('alerts'):
+        op.drop_table('alerts')
 
 
 def downgrade() -> None:

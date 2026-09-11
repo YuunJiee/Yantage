@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from ..repositories.net_worth_history_repo import NetWorthHistoryRepository
+from ..utils.category_rules import is_negative_category
 from .asset_service import AssetService
 
 logger = logging.getLogger(__name__)
@@ -25,9 +26,9 @@ def snapshot_net_worth(db: Session) -> None:
         if not asset.include_in_net_worth:
             continue
         val = asset.value_twd or 0.0
-        if asset.category == 'Liabilities':
+        if is_negative_category(asset.category):
             net_worth -= val
-            breakdown['Liabilities'] = breakdown.get('Liabilities', 0.0) - val
+            breakdown[asset.category] = breakdown.get(asset.category, 0.0) - val
         else:
             net_worth += val
             breakdown[asset.category] = breakdown.get(asset.category, 0.0) + val

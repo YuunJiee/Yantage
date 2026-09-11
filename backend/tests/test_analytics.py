@@ -6,6 +6,7 @@ DB tests use the shared ``db`` fixture and autouse mocks from conftest.py.
 import json
 import pytest
 from datetime import date, datetime, timedelta
+from unittest.mock import patch
 
 from backend import models
 from backend.services import analytics_service
@@ -72,3 +73,23 @@ def test_net_worth_history_slow_path_no_assets_returns_empty_series(db):
     assert isinstance(result, list)
     assert len(result) == 31  # 30d range = 31 days inclusive
     assert all(r["value"] == 0.0 for r in result)
+
+
+def test_net_worth_history_propagates_errors_instead_of_swallowing(db):
+    """Pins the fix removing the blanket try/except that used to turn any
+    failure (a real bug, a DB error) into an indistinguishable empty []."""
+    with patch(
+        "backend.services.analytics_service.NetWorthHistoryRepository.list_since",
+        side_effect=RuntimeError("boom"),
+    ):
+        with pytest.raises(RuntimeError):
+            analytics_service.get_net_worth_history(db, range_str="30d")
+
+
+def test_goal_forecast_propagates_errors_instead_of_swallowing(db):
+    with patch(
+        "backend.services.analytics_service.GoalRepository.list_all",
+        side_effect=RuntimeError("boom"),
+    ):
+        with pytest.raises(RuntimeError):
+            analytics_service.compute_goal_forecast(db)

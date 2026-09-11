@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -24,11 +24,8 @@ def export_assets_csv(db: Session = Depends(database.get_db)):
 
 @router.delete("/reset")
 def reset_database(db: Session = Depends(database.get_db)):
-    try:
-        system_service.reset_database(db)
-        return {"message": "System reset successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    system_service.reset_database(db)
+    return {"message": "System reset successfully"}
 
 @router.post("/refresh")
 def refresh_prices(db: Session = Depends(database.get_db)):

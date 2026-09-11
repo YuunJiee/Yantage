@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from ... import schemas
+from ...constants import AssetCategory
 from ...repositories.asset_repo import AssetRepository
 
 
@@ -42,7 +43,7 @@ def sync_asset_balance(
         repo.record_balance_diff(asset, amount)
     else:
         asset = repo.create(schemas.AssetCreate(
-            name=target_name, ticker=ticker, category="Crypto", sub_category="Crypto",
+            name=target_name, ticker=ticker, category=AssetCategory.CRYPTO, sub_category="Crypto",
             source=source, icon=icon, include_in_net_worth=True,
             current_price=current_price if current_price > 0 else None,
             connection_id=connection_id,

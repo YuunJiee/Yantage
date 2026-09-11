@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from .. import models
+from .. import models, schemas
 from ..repositories.asset_repo import AssetRepository
 from ..utils.currency import is_usd_denominated
 from .exchange_rate_service import get_usdt_twd_rate
@@ -40,5 +40,16 @@ class AssetService:
 
         return asset
 
+    def get(self, asset_id: int) -> models.Asset | None:
+        asset = self.repo.get(asset_id)
+        return self._enrich(asset) if asset else None
+
     def list_all(self, skip: int = 0, limit: int = 100) -> list[models.Asset]:
         return [self._enrich(a) for a in self.repo.list_all(skip=skip, limit=limit)]
+
+    def create(self, data: schemas.AssetCreate) -> models.Asset:
+        return self._enrich(self.repo.create(data))
+
+    def update(self, asset_id: int, data: schemas.AssetUpdate) -> models.Asset | None:
+        asset = self.repo.update(asset_id, data)
+        return self._enrich(asset) if asset else None
