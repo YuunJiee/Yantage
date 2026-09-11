@@ -1,5 +1,6 @@
 import type { BudgetCategory, Asset } from '@/lib/types';
-import { MACRO_GROUPS } from './constants';
+import { MACRO_GROUPS, EMERGENCY_FUND_TARGET_MONTHS } from './constants';
+import { getAssetDisplayValue } from '../AssetAccordion/helpers';
 
 export function computeTotalIncome(incomeItems: { amount: number }[]): number {
     return incomeItems.reduce((s, i) => s + i.amount, 0);
@@ -18,12 +19,12 @@ export function computeInvestmentRatio(categories: BudgetCategory[], totalIncome
 
 export function computeEmergencyFund(categories: BudgetCategory[], assets: Asset[]) {
     const fluidAssetsTotal = assets
-        .filter(a => a.category === 'Fluid' || a.category === 'Crypto')
-        .reduce((s, a) => s + (a.value_twd || 0), 0);
+        .filter(a => (a.category === 'Fluid' || a.category === 'Crypto') && a.include_in_net_worth !== false)
+        .reduce((s, a) => s + getAssetDisplayValue(a), 0);
     const survivalMonthlyCost = categories
         .filter(c => c.group_name === 'Fixed' || c.group_name === 'Living')
         .reduce((s, c) => s + c.budget_amount, 0);
-    const target = survivalMonthlyCost * 3;
+    const target = survivalMonthlyCost * EMERGENCY_FUND_TARGET_MONTHS;
     const progress = target > 0 ? Math.min((fluidAssetsTotal / target) * 100, 100) : 0;
     return { fluidAssetsTotal, survivalMonthlyCost, target, progress };
 }

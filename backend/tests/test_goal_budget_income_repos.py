@@ -36,14 +36,18 @@ def test_goal_update_and_delete(db):
 
 
 # ── BudgetRepository ─────────────────────────────────────────────────────────
+#
+# is_active was removed (docs/specs/budgets-income.md Decision 2) — it was a
+# soft-delete flag never actually set to False by any UI; the app's real
+# delete has always been the hard DELETE exercised in the tests below.
 
-def test_budget_list_all_filters_inactive(db):
+def test_budget_list_all_lists_every_category(db):
     repo = BudgetRepository(db)
-    active = repo.create(schemas.BudgetCategoryCreate(name="食物", budget_amount=5000))
-    repo.create(schemas.BudgetCategoryCreate(name="娛樂", budget_amount=1000, is_active=False))
+    a = repo.create(schemas.BudgetCategoryCreate(name="食物", budget_amount=5000))
+    b = repo.create(schemas.BudgetCategoryCreate(name="娛樂", budget_amount=1000))
 
     listed = repo.list_all()
-    assert [c.id for c in listed] == [active.id]
+    assert {c.id for c in listed} == {a.id, b.id}
 
 
 def test_budget_update_and_delete(db):
@@ -58,13 +62,13 @@ def test_budget_update_and_delete(db):
 
 # ── IncomeRepository ─────────────────────────────────────────────────────────
 
-def test_income_list_all_filters_inactive(db):
+def test_income_list_all_lists_every_item(db):
     repo = IncomeRepository(db)
-    active = repo.create(schemas.IncomeItemCreate(name="Salary", amount=50_000))
-    repo.create(schemas.IncomeItemCreate(name="Old job", amount=30_000, is_active=False))
+    a = repo.create(schemas.IncomeItemCreate(name="Salary", amount=50_000))
+    b = repo.create(schemas.IncomeItemCreate(name="Bonus", amount=10_000))
 
     listed = repo.list_all()
-    assert [i.id for i in listed] == [active.id]
+    assert {i.id for i in listed} == {a.id, b.id}
 
 
 def test_income_update_and_delete(db):

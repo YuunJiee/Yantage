@@ -109,10 +109,11 @@ frontend/
 │   ├── dashboard/                 # DashboardClient 的子元件
 │   │   ├── NetWorthHero.tsx
 │   │   └── SortableSections.tsx   # 拖拉排序 + localStorage 持久化，跟顯示內容脫鉤
-│   ├── budget/                    # app/budget/page.tsx 的子元件
-│   │   ├── constants.ts           # COLOR_OPTIONS / MACRO_GROUPS / GROUP_ZH
+│   ├── budget/                    # app/budget/page.tsx 的子元件（含 Income）
+│   │   ├── constants.ts           # COLOR_OPTIONS / MACRO_GROUPS / GROUP_ZH / 差額與緊急預備金門檻常數
 │   │   ├── budgetMetrics.ts       # 純函式：差額/緊急預備金/投資佔比計算
-│   │   └── BudgetCategoryFormSheet.tsx
+│   │   ├── BudgetCategoryFormSheet.tsx
+│   │   └── IncomeItemDialog.tsx
 │   ├── subscriptions/             # app/subscriptions/page.tsx 的子元件
 │   │   ├── helpers.ts
 │   │   ├── NewSubscriptionDialog.tsx
@@ -129,8 +130,7 @@ frontend/
 │   ├── views/                     # AssetActionDialog 的子 view 元件
 │   │   ├── AssetHistoryView.tsx
 │   │   ├── EditAssetView.tsx
-│   │   ├── QuickAdjustView.tsx
-│   │   └── IncomeItemDialog.tsx
+│   │   └── QuickAdjustView.tsx
 │   └── ui/                        # shadcn/radix 基礎元件（含 confirm-delete.tsx 共用刪除確認、
 │                                   #   section-label.tsx 共用區塊標題、skeleton.tsx 內的 PageError）
 └── lib/

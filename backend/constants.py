@@ -32,4 +32,12 @@ class GoalType(str, Enum):
     ASSET_ALLOCATION = "ASSET_ALLOCATION"
 
 
+class BudgetGroup(str, Enum):
+    FIXED = "Fixed"
+    LIVING = "Living"
+    INVESTMENT = "Investment"
+    GROWTH = "Growth"
+    UNASSIGNED = "Unassigned"
+
+
 NEGATIVE_CATEGORIES = {AssetCategory.LIABILITIES}

@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import List, Optional
 from datetime import datetime
 
-from .constants import AssetCategory, Provider, GoalType
+from .constants import AssetCategory, Provider, GoalType, BudgetGroup
 
 
 def _validate_allocation_data(value: Optional[str]) -> Optional[str]:
@@ -161,11 +161,10 @@ class ForecastResponse(BaseModel):
 class BudgetCategoryBase(BaseModel):
     name: str
     icon: Optional[str] = None
-    budget_amount: float
+    budget_amount: float = Field(ge=0)
     color: Optional[str] = None
     note: Optional[str] = None
-    group_name: Optional[str] = None
-    is_active: Optional[bool] = True
+    group_name: Optional[BudgetGroup] = None
 
 class BudgetCategoryCreate(BudgetCategoryBase):
     pass
@@ -173,24 +172,21 @@ class BudgetCategoryCreate(BudgetCategoryBase):
 class BudgetCategoryUpdate(BaseModel):
     name: Optional[str] = None
     icon: Optional[str] = None
-    budget_amount: Optional[float] = None
+    budget_amount: Optional[float] = Field(default=None, ge=0)
     color: Optional[str] = None
     note: Optional[str] = None
-    group_name: Optional[str] = None
-    is_active: Optional[bool] = None
+    group_name: Optional[BudgetGroup] = None
 
 class IncomeItemBase(BaseModel):
     name: str
-    amount: float
-    is_active: Optional[bool] = True
+    amount: float = Field(ge=0)
 
 class IncomeItemCreate(IncomeItemBase):
     pass
 
 class IncomeItemUpdate(BaseModel):
     name: Optional[str] = None
-    amount: Optional[float] = None
-    is_active: Optional[bool] = None
+    amount: Optional[float] = Field(default=None, ge=0)
 
 class IncomeItem(IncomeItemBase):
     id: int

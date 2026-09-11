@@ -11,6 +11,7 @@ import { Trash2 } from "lucide-react";
 import { createIncomeItem, updateIncomeItem, deleteIncomeItem } from "@/lib/api";
 import { useFormSubmit } from "@/lib/useFormSubmit";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
+import { useToast } from "@/components/ui/toast";
 
 interface IncomeItemDialogProps {
     open: boolean;
@@ -20,6 +21,7 @@ interface IncomeItemDialogProps {
 }
 
 export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: IncomeItemDialogProps) {
+    const { toast } = useToast();
     const [name, setName] = useState("");
     const [amount, setAmount] = useState("");
     const [confirmDelete, setConfirmDelete] = useState(false);
@@ -34,7 +36,7 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
         }
     }, [open, editingItem]);
 
-    const { submit: handleSave, loading: saving } = useFormSubmit(async () => {
+    const { submit: handleSave, loading: saving, error: saveError } = useFormSubmit(async () => {
         if (!name || !amount) return;
         if (editingItem) {
             await updateIncomeItem(editingItem.id, {
@@ -51,7 +53,7 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
         onOpenChange(false);
     });
 
-    const { submit: handleDelete, loading: deleting } = useFormSubmit(async () => {
+    const { submit: handleDelete, loading: deleting, error: deleteError } = useFormSubmit(async () => {
         if (!editingItem) return;
         await deleteIncomeItem(editingItem.id);
         onSave();
@@ -59,6 +61,14 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
     });
 
     const loading = saving || deleting;
+
+    useEffect(() => {
+        if (saveError) toast(editingItem ? '更新收入項目失敗' : '新增收入項目失敗', 'error');
+    }, [saveError]);
+
+    useEffect(() => {
+        if (deleteError) toast('刪除收入項目失敗', 'error');
+    }, [deleteError]);
 
     return (
         <Sheet
@@ -104,7 +114,7 @@ export function IncomeItemDialog({ open, onOpenChange, onSave, editingItem }: In
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
                         取消
                     </Button>
-                    <Button onClick={handleSave} disabled={loading || !name || !amount}>
+                    <Button onClick={handleSave} disabled={loading || !name || !amount || parseFloat(amount) < 0}>
                         {loading ? "..." : '儲存變更'}
                     </Button>
                 </div>

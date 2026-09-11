@@ -128,3 +128,50 @@ def test_goal_create_accepts_allocation_within_rounding_tolerance():
 def test_goal_update_rejects_allocation_not_summing_to_100():
     with pytest.raises(ValidationError):
         schemas.GoalUpdate(allocation_data='{"Stock": 200}')
+
+
+# ── docs/specs/budgets-income.md Decision 4/5: budget/income validation ──────
+
+def test_budget_category_create_rejects_negative_amount():
+    with pytest.raises(ValidationError):
+        schemas.BudgetCategoryCreate(name="食物", budget_amount=-1)
+
+
+def test_budget_category_create_accepts_zero_amount():
+    cat = schemas.BudgetCategoryCreate(name="食物", budget_amount=0)
+    assert cat.budget_amount == 0
+
+
+def test_budget_category_update_rejects_negative_amount():
+    with pytest.raises(ValidationError):
+        schemas.BudgetCategoryUpdate(budget_amount=-1)
+
+
+def test_budget_category_create_rejects_invalid_group_name():
+    with pytest.raises(ValidationError):
+        schemas.BudgetCategoryCreate(name="食物", budget_amount=100, group_name="Random")
+
+
+def test_budget_category_create_accepts_valid_group_name():
+    cat = schemas.BudgetCategoryCreate(name="食物", budget_amount=100, group_name="Living")
+    assert cat.group_name == "Living"
+
+
+def test_budget_category_create_allows_omitted_group_name():
+    cat = schemas.BudgetCategoryCreate(name="食物", budget_amount=100)
+    assert cat.group_name is None
+
+
+def test_income_item_create_rejects_negative_amount():
+    with pytest.raises(ValidationError):
+        schemas.IncomeItemCreate(name="Salary", amount=-1)
+
+
+def test_income_item_create_accepts_zero_amount():
+    item = schemas.IncomeItemCreate(name="Salary", amount=0)
+    assert item.amount == 0
+
+
+def test_income_item_update_rejects_negative_amount():
+    with pytest.raises(ValidationError):
+        schemas.IncomeItemUpdate(amount=-1)

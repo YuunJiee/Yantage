@@ -91,6 +91,26 @@ describe('computeEmergencyFund', () => {
         const assets = [makeAsset({ category: 'Fluid', value_twd: 1_000_000 })];
         expect(computeEmergencyFund(categories, assets).progress).toBe(100);
     });
+
+    it('excludes assets with include_in_net_worth === false (docs/specs/budgets-income.md R3)', () => {
+        const categories = [makeCategory({ group_name: 'Living', budget_amount: 1000 })];
+        const assets = [
+            makeAsset({ category: 'Fluid', value_twd: 10000, include_in_net_worth: true }),
+            makeAsset({ category: 'Fluid', value_twd: 5000, include_in_net_worth: false }),
+        ];
+        expect(computeEmergencyFund(categories, assets).fluidAssetsTotal).toBe(10000);
+    });
+
+    it('falls back to current_price * transactions when value_twd is 0, via getAssetDisplayValue (R3)', () => {
+        const categories = [makeCategory({ group_name: 'Living', budget_amount: 1000 })];
+        const assets = [
+            makeAsset({
+                category: 'Fluid', value_twd: 0, current_price: 10,
+                transactions: [{ id: 1, asset_id: 1, amount: 5, buy_price: 10, date: '2026-01-01' }],
+            }),
+        ];
+        expect(computeEmergencyFund(categories, assets).fluidAssetsTotal).toBe(50);
+    });
 });
 
 describe('groupBudgetsByMacroGroup', () => {

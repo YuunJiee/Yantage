@@ -1,18 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Pencil, ShieldCheck, AlertTriangle, AlertCircle } from 'lucide-react';
 import { usePrivacy } from "@/components/PrivacyProvider";
 import { usePrivateMoney } from '@/lib/usePrivateMoney';
 import { cn, formatMoney } from '@/lib/utils';
 import { createBudgetCategory, updateBudgetCategory, deleteBudgetCategory } from '@/lib/api';
 import { useBudgetCategories, useIncomeItems, useDashboard } from '@/lib/hooks';
+import { useFormSubmit } from '@/lib/useFormSubmit';
+import { useToast } from '@/components/ui/toast';
 import { AssetIcon } from '@/components/IconPicker';
-import { IncomeItemDialog } from '@/components/views/IncomeItemDialog';
+import { IncomeItemDialog } from '@/components/budget/IncomeItemDialog';
 import { PageError } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import type { BudgetCategory, IncomeItem } from '@/lib/types';
-import { getColors, MACRO_GROUPS, GROUP_ZH } from '@/components/budget/constants';
+import {
+    getColors, MACRO_GROUPS, GROUP_ZH,
+    DEFICIT_WARNING_THRESHOLD, INVESTMENT_RATIO_HEALTHY_THRESHOLD, EMERGENCY_FUND_TARGET_MONTHS,
+} from '@/components/budget/constants';
 import {
     computeTotalIncome,
     computeTotalBudget,
@@ -23,11 +28,25 @@ import {
 import { BudgetCategoryFormSheet, type BudgetFormState } from '@/components/budget/BudgetCategoryFormSheet';
 
 export default function BudgetPage() {
+    const { toast } = useToast();
     const { isPrivacyMode } = usePrivacy();
     const privateMoney = usePrivateMoney();
-    const { categories, refresh: refreshBudgets, isLoading, isError } = useBudgetCategories();
-    const { incomeItems, refresh: refreshIncome } = useIncomeItems();
-    const { dashboard } = useDashboard();
+    const {
+        categories, refresh: refreshBudgets,
+        isLoading: budgetsLoading, isError: budgetsError,
+    } = useBudgetCategories();
+    const {
+        incomeItems, refresh: refreshIncome,
+        isLoading: incomeLoading, isError: incomeError,
+    } = useIncomeItems();
+    const {
+        dashboard, isLoading: dashboardLoading, isError: dashboardError,
+        refresh: refreshDashboard,
+    } = useDashboard();
+
+    const isLoading = budgetsLoading || incomeLoading || dashboardLoading;
+    const isError = budgetsError || incomeError || dashboardError;
+    const refreshAll = () => { refreshBudgets(); refreshIncome(); refreshDashboard(); };
 
     const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
     const [confirmBudgetDelete, setConfirmBudgetDelete] = useState(false);
@@ -45,27 +64,34 @@ export default function BudgetPage() {
         setIsBudgetDialogOpen(true);
     };
 
-    const handleBudgetSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const { submit: submitBudget, loading: savingBudget, error: budgetSaveError } = useFormSubmit(async () => {
         const payload = { name: budgetForm.name, icon: budgetForm.icon || null, budget_amount: parseFloat(budgetForm.budget_amount), color: budgetForm.color || null, note: budgetForm.note || null, group_name: budgetForm.group_name || 'Unassigned' };
-        try {
-            if (editingBudgetId) {
-                await updateBudgetCategory(editingBudgetId, payload);
-            } else {
-                await createBudgetCategory(payload);
-            }
-            setIsBudgetDialogOpen(false);
-            refreshBudgets();
-        } catch (err) { console.error(err); }
-    };
+        if (editingBudgetId) {
+            await updateBudgetCategory(editingBudgetId, payload);
+        } else {
+            await createBudgetCategory(payload);
+        }
+        setIsBudgetDialogOpen(false);
+        refreshBudgets();
+    });
+    const handleBudgetSubmit = (e: React.FormEvent) => { e.preventDefault(); submitBudget(); };
 
-    const handleBudgetDelete = async () => {
+    const { submit: submitBudgetDelete, loading: deletingBudget, error: budgetDeleteError } = useFormSubmit(async () => {
         if (!editingBudgetId) return;
         await deleteBudgetCategory(editingBudgetId);
         setIsBudgetDialogOpen(false);
         setConfirmBudgetDelete(false);
         refreshBudgets();
-    };
+    });
+    const handleBudgetDelete = () => submitBudgetDelete();
+
+    useEffect(() => {
+        if (budgetSaveError) toast(editingBudgetId ? '更新類別失敗' : '新增類別失敗', 'error');
+    }, [budgetSaveError]);
+
+    useEffect(() => {
+        if (budgetDeleteError) toast('刪除類別失敗', 'error');
+    }, [budgetDeleteError]);
 
     // Metrics
     const totalIncome = computeTotalIncome(incomeItems);
@@ -77,7 +103,7 @@ export default function BudgetPage() {
 
     const deficitStatus = deficit > 0
         ? { icon: ShieldCheck, color: 'text-emerald-600', label: '安全 · 可儲蓄' }
-        : deficit > -5000
+        : deficit > DEFICIT_WARNING_THRESHOLD
             ? { icon: AlertTriangle, color: 'text-amber-500', label: '小赤字 · 警告' }
             : { icon: AlertCircle, color: 'text-red-500', label: '大赤字 · 危險' };
     const DeficitIcon = deficitStatus.icon;
@@ -92,7 +118,7 @@ export default function BudgetPage() {
         </div>
     );
 
-    if (isError) return <PageError onRetry={refreshBudgets} />;
+    if (isError) return <PageError onRetry={refreshAll} />;
 
     return (
         <div className="mx-auto max-w-5xl px-4 py-8 pb-24">
@@ -136,7 +162,7 @@ export default function BudgetPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="rounded-2xl border border-border bg-card px-4 py-3">
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs text-muted-foreground">緊急預備金（3 個月）</span>
+                            <span className="text-xs text-muted-foreground">緊急預備金（{EMERGENCY_FUND_TARGET_MONTHS} 個月）</span>
                             <span className="text-sm font-semibold tabular-nums">{emergencyFundProgress.toFixed(0)}%</span>
                         </div>
                         <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
@@ -150,7 +176,7 @@ export default function BudgetPage() {
                     <div className="rounded-2xl border border-border bg-card px-4 py-3">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-xs text-muted-foreground">投資佔比</span>
-                            <span className={cn('text-sm font-semibold tabular-nums', investmentRatio >= 20 ? 'text-emerald-600' : 'text-foreground')}>
+                            <span className={cn('text-sm font-semibold tabular-nums', investmentRatio >= INVESTMENT_RATIO_HEALTHY_THRESHOLD ? 'text-emerald-600' : 'text-foreground')}>
                                 {investmentRatio.toFixed(1)}%
                             </span>
                         </div>
@@ -158,7 +184,7 @@ export default function BudgetPage() {
                             <div className="h-full bg-purple-500/70 rounded-full" style={{ width: `${Math.min(investmentRatio, 100)}%` }} />
                         </div>
                         <div className="text-[11px] text-muted-foreground/70 mt-1.5">
-                            {investmentRatio >= 20 ? '投資佔比健康 🚀' : '建議投資比例至少 20%'}
+                            {investmentRatio >= INVESTMENT_RATIO_HEALTHY_THRESHOLD ? '投資佔比健康 🚀' : `建議投資比例至少 ${INVESTMENT_RATIO_HEALTHY_THRESHOLD}%`}
                         </div>
                     </div>
                 </div>
@@ -240,7 +266,7 @@ export default function BudgetPage() {
                                                         </div>
                                                         <div className="flex items-center gap-2.5 mb-2.5">
                                                             <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center shrink-0', colors.bg)}>
-                                                                {cat.icon ? <AssetIcon icon={cat.icon} className={cn('w-4 h-4', colors.text)} /> : <span className="text-sm">📦</span>}
+                                                                <AssetIcon icon={cat.icon || 'ShoppingBag'} className={cn('w-4 h-4', colors.text)} />
                                                             </div>
                                                             <div className="min-w-0 flex-1">
                                                                 <div className="text-sm font-semibold truncate">{cat.name}</div>
@@ -276,9 +302,11 @@ export default function BudgetPage() {
                 budgetForm={budgetForm}
                 setBudgetForm={setBudgetForm}
                 onSubmit={handleBudgetSubmit}
+                loading={savingBudget}
                 confirmDelete={confirmBudgetDelete}
                 setConfirmDelete={setConfirmBudgetDelete}
                 onDelete={handleBudgetDelete}
+                deleting={deletingBudget}
             />
         </div>
     );

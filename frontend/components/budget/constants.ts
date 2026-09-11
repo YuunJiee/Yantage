@@ -20,3 +20,12 @@ export const GROUP_ZH: Record<string, string> = {
     Growth: '成長',
     Unassigned: '未分類',
 };
+
+/** 差額 status thresholds (docs/specs/budgets-income.md Decision 8). */
+export const DEFICIT_WARNING_THRESHOLD = -5000;
+
+/** 投資佔比 considered "healthy" at or above this percentage. */
+export const INVESTMENT_RATIO_HEALTHY_THRESHOLD = 20;
+
+/** 緊急預備金 target = this many months of Fixed+Living budget. */
+export const EMERGENCY_FUND_TARGET_MONTHS = 3;

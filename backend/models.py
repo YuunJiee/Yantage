@@ -72,12 +72,11 @@ class BudgetCategory(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)          # e.g. "食物", "交通"
-    icon = Column(String, nullable=True)       # Emoji, e.g. "🍜"
+    icon = Column(String, nullable=True)       # lucide-react icon name, e.g. "ShoppingBag"
     budget_amount = Column(Float)              # Monthly budget in TWD
     color = Column(String, nullable=True)      # Optional color hint
     note = Column(String, nullable=True)       # Optional note
-    group_name = Column(String, nullable=True) # Macro group: "Fixed", "Living", "Investment", "Growth"
-    is_active = Column(Boolean, default=True)
+    group_name = Column(String, nullable=True) # BudgetGroup value: "Fixed", "Living", "Investment", "Growth", "Unassigned"
     created_at = Column(DateTime, default=datetime.now)
 
 class IncomeItem(Base):
@@ -86,7 +85,6 @@ class IncomeItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)          # e.g. "Salary", "Dividend"
     amount = Column(Float)                     # Expected monthly income
-    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.now)
 
 class SystemSetting(Base):

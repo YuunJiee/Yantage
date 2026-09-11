@@ -26,9 +26,11 @@ interface BudgetCategoryFormSheetProps {
     budgetForm: BudgetFormState;
     setBudgetForm: (form: BudgetFormState) => void;
     onSubmit: (e: React.FormEvent) => void;
+    loading?: boolean;
     confirmDelete: boolean;
     setConfirmDelete: (v: boolean) => void;
     onDelete: () => void;
+    deleting?: boolean;
 }
 
 export function BudgetCategoryFormSheet({
@@ -38,10 +40,15 @@ export function BudgetCategoryFormSheet({
     budgetForm,
     setBudgetForm,
     onSubmit,
+    loading = false,
     confirmDelete,
     setConfirmDelete,
     onDelete,
+    deleting = false,
 }: BudgetCategoryFormSheetProps) {
+    const amountValid = budgetForm.budget_amount !== ''
+        && !isNaN(parseFloat(budgetForm.budget_amount))
+        && parseFloat(budgetForm.budget_amount) >= 0;
     return (
         <Sheet
             isOpen={isOpen}
@@ -130,16 +137,19 @@ export function BudgetCategoryFormSheet({
                             <ConfirmDelete
                                 onConfirm={onDelete}
                                 onCancel={() => setConfirmDelete(false)}
+                                loading={deleting}
                             />
                         ) : (
-                            <button type="button" onClick={() => setConfirmDelete(true)}
+                            <button type="button" onClick={() => setConfirmDelete(true)} disabled={loading}
                                 className="flex items-center gap-1.5 text-sm text-destructive/70 hover:text-destructive transition-colors">
                                 <Trash2 className="w-3.5 h-3.5" />
                                 刪除
                             </button>
                         )
                     ) : <span />}
-                    <Button type="submit">{editingBudgetId ? '儲存變更' : '新增類別'}</Button>
+                    <Button type="submit" disabled={loading || !amountValid}>
+                        {loading ? '儲存中…' : (editingBudgetId ? '儲存變更' : '新增類別')}
+                    </Button>
                 </div>
             </form>
         </Sheet>
