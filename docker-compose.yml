@@ -9,6 +9,13 @@
 #   Dashboard  → http://localhost:3001
 #   API docs   → http://localhost:8000/docs
 
+# Pinned so the compose project name (and therefore the yantage_data volume
+# name, "personal-asset-dash_yantage_data") never changes even if the repo
+# folder itself gets renamed — otherwise `docker compose up` would silently
+# create a new, empty volume under a new project name and the app would look
+# like all its data vanished.
+name: personal-asset-dash
+
 services:
 
   # ── FastAPI Backend ──────────────────────────────────────────────────────
