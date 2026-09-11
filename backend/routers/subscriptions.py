@@ -25,12 +25,23 @@ def create_subscription(data: schemas.SubscriptionCreate, db: Session = Depends(
     return SubscriptionRepository(db).create(data)
 
 
+_LOCKED_FIELDS = ("total_shares", "my_shares", "collection_period_months")
+
+
 @router.put("/{subscription_id}", response_model=schemas.Subscription)
 def update_subscription(subscription_id: int, data: schemas.SubscriptionUpdate, db: Session = Depends(database.get_db)):
-    result = SubscriptionRepository(db).update(subscription_id, data)
-    if not result:
+    repo = SubscriptionRepository(db)
+    existing = repo.get(subscription_id)
+    if not existing:
         raise HTTPException(status_code=404, detail="Subscription not found")
-    return result
+    for field in _LOCKED_FIELDS:
+        new_value = getattr(data, field)
+        if new_value is not None and new_value != getattr(existing, field):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Cannot change {field} on an existing subscription — delete and recreate it instead",
+            )
+    return repo.update(subscription_id, data)
 
 
 @router.delete("/{subscription_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -46,6 +57,14 @@ def add_member(subscription_id: int, data: schemas.SubscriptionMemberCreate, db:
     result = SubscriptionRepository(db).add_member(subscription_id, data)
     if not result:
         raise HTTPException(status_code=404, detail="Subscription not found")
+    return result
+
+
+@router.put("/members/{member_id}", response_model=schemas.SubscriptionMember)
+def update_member(member_id: int, data: schemas.SubscriptionMemberUpdate, db: Session = Depends(database.get_db)):
+    result = SubscriptionRepository(db).update_member(member_id, data)
+    if not result:
+        raise HTTPException(status_code=404, detail="Member not found")
     return result
 
 

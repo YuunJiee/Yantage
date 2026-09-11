@@ -4,10 +4,13 @@ import { useState } from 'react';
 import { Plus, Trash2, Pencil, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ConfirmDelete } from '@/components/ui/confirm-delete';
+import { useToast } from '@/components/ui/toast';
+import { usePrivateMoney } from '@/lib/usePrivateMoney';
 import {
     updateSubscription,
     deleteSubscription,
     addSubscriptionMember,
+    updateSubscriptionMember,
     deleteSubscriptionMember,
     deleteCollectionCycle,
     updateCyclePayment,
@@ -24,14 +27,24 @@ export function SubscriptionCard({
     sub: Subscription;
     onMutate: () => void;
 }) {
+    const { toast } = useToast();
+    const privateMoney = usePrivateMoney();
+
     const [showCycles, setShowCycles] = useState(true);
     const [showNewCycle, setShowNewCycle] = useState(false);
     const [editing, setEditing] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const [deletingSub, setDeletingSub] = useState(false);
+    const [savingEdit, setSavingEdit] = useState(false);
     const [editName, setEditName] = useState(sub.name);
     const [editCost, setEditCost] = useState(String(sub.total_cost));
     const [newMemberName, setNewMemberName] = useState('');
     const [addingMember, setAddingMember] = useState(false);
+    const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
+    const [memberDraftName, setMemberDraftName] = useState('');
+    const [renamingMemberId, setRenamingMemberId] = useState<number | null>(null);
+    const [confirmDeleteMemberId, setConfirmDeleteMemberId] = useState<number | null>(null);
+    const [deletingMemberId, setDeletingMemberId] = useState<number | null>(null);
 
     const amount = perMemberAmount(sub);
     const sortedCycles = [...sub.cycles].sort(
@@ -39,45 +52,106 @@ export function SubscriptionCard({
     );
     const pendingTotal = sub.cycles.flatMap(c => c.payments).filter(p => !p.paid_at).length;
 
+    const openEdit = () => {
+        setEditName(sub.name);
+        setEditCost(String(sub.total_cost));
+        setEditing(true);
+    };
+
     const handleDelete = async () => {
-        await deleteSubscription(sub.id);
-        onMutate();
+        setDeletingSub(true);
+        try {
+            await deleteSubscription(sub.id);
+            onMutate();
+        } catch {
+            toast('刪除訂閱失敗', 'error');
+        } finally {
+            setDeletingSub(false);
+        }
     };
 
     const handleSaveEdit = async () => {
-        await updateSubscription(sub.id, {
-            name: editName.trim() || sub.name,
-            total_cost: parseFloat(editCost) || sub.total_cost,
-        });
-        setEditing(false);
-        onMutate();
+        setSavingEdit(true);
+        try {
+            await updateSubscription(sub.id, {
+                name: editName.trim() || sub.name,
+                total_cost: parseFloat(editCost) || sub.total_cost,
+            });
+            setEditing(false);
+            onMutate();
+        } catch {
+            toast('更新訂閱失敗', 'error');
+        } finally {
+            setSavingEdit(false);
+        }
     };
 
     const handleAddMember = async () => {
         const name = newMemberName.trim();
         if (!name) return;
         setAddingMember(true);
-        await addSubscriptionMember(sub.id, name);
-        setNewMemberName('');
-        setAddingMember(false);
-        onMutate();
+        try {
+            await addSubscriptionMember(sub.id, name);
+            setNewMemberName('');
+            onMutate();
+        } catch {
+            toast('新增成員失敗', 'error');
+        } finally {
+            setAddingMember(false);
+        }
+    };
+
+    const startRenameMember = (memberId: number, currentName: string) => {
+        setEditingMemberId(memberId);
+        setMemberDraftName(currentName);
+    };
+
+    const handleRenameMember = async (memberId: number) => {
+        const name = memberDraftName.trim();
+        if (!name) return;
+        setRenamingMemberId(memberId);
+        try {
+            await updateSubscriptionMember(memberId, name);
+            setEditingMemberId(null);
+            onMutate();
+        } catch {
+            toast('重新命名成員失敗', 'error');
+        } finally {
+            setRenamingMemberId(null);
+        }
     };
 
     const handleDeleteMember = async (memberId: number) => {
-        await deleteSubscriptionMember(memberId);
-        onMutate();
+        setDeletingMemberId(memberId);
+        try {
+            await deleteSubscriptionMember(memberId);
+            setConfirmDeleteMemberId(null);
+            onMutate();
+        } catch {
+            toast('刪除成員失敗', 'error');
+        } finally {
+            setDeletingMemberId(null);
+        }
     };
 
     const handlePaymentToggle = async (payment: CyclePayment) => {
-        await updateCyclePayment(payment.id, {
-            paid_at: payment.paid_at ? null : todayStr(),
-        });
-        onMutate();
+        try {
+            await updateCyclePayment(payment.id, {
+                paid_at: payment.paid_at ? null : todayStr(),
+            });
+            onMutate();
+        } catch {
+            toast('更新付款狀態失敗', 'error');
+        }
     };
 
     const handleDeleteCycle = async (cycleId: number) => {
-        await deleteCollectionCycle(cycleId);
-        onMutate();
+        try {
+            await deleteCollectionCycle(cycleId);
+            onMutate();
+        } catch {
+            toast('刪除週期失敗', 'error');
+        }
     };
 
     return (
@@ -100,10 +174,10 @@ export function SubscriptionCard({
                                     value={editCost}
                                     onChange={e => setEditCost(e.target.value)}
                                 />
-                                <button onClick={handleSaveEdit} className="text-emerald-600 hover:text-emerald-700">
+                                <button onClick={handleSaveEdit} disabled={savingEdit} aria-label="儲存訂閱變更" className="text-emerald-600 hover:text-emerald-700 disabled:opacity-50">
                                     <Check className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => setEditing(false)} className="text-muted-foreground hover:text-foreground">
+                                <button onClick={() => setEditing(false)} disabled={savingEdit} aria-label="取消編輯訂閱" className="text-muted-foreground hover:text-foreground disabled:opacity-50">
                                     <X className="w-4 h-4" />
                                 </button>
                             </div>
@@ -121,13 +195,65 @@ export function SubscriptionCard({
                             <div className="mt-2 space-y-1.5">
                                 {sub.members.map(m => (
                                     <div key={m.id} className="flex items-center gap-1.5">
-                                        <span className="text-xs text-foreground flex-1">{m.name}</span>
-                                        <button
-                                            onClick={() => handleDeleteMember(m.id)}
-                                            className="text-muted-foreground hover:text-destructive transition-colors"
-                                        >
-                                            <X className="w-3 h-3" />
-                                        </button>
+                                        {editingMemberId === m.id ? (
+                                            <>
+                                                <input
+                                                    className="flex-1 h-6 text-xs rounded-lg border border-border/60 bg-muted/40 px-2 focus:outline-none focus:ring-1 focus:ring-ring"
+                                                    value={memberDraftName}
+                                                    onChange={e => setMemberDraftName(e.target.value)}
+                                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleRenameMember(m.id); } }}
+                                                    autoFocus
+                                                />
+                                                <button
+                                                    onClick={() => handleRenameMember(m.id)}
+                                                    disabled={renamingMemberId === m.id}
+                                                    aria-label={`確認將 ${m.name} 重新命名`}
+                                                    className="text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
+                                                >
+                                                    <Check className="w-3 h-3" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setEditingMemberId(null)}
+                                                    disabled={renamingMemberId === m.id}
+                                                    aria-label="取消重新命名"
+                                                    className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </>
+                                        ) : confirmDeleteMemberId === m.id ? (
+                                            <>
+                                                <span className="text-xs text-foreground flex-1">{m.name}</span>
+                                                <ConfirmDelete
+                                                    onConfirm={() => handleDeleteMember(m.id)}
+                                                    onCancel={() => setConfirmDeleteMemberId(null)}
+                                                    loading={deletingMemberId === m.id}
+                                                    label="確定刪除？將一併刪除此成員所有週期的付款紀錄"
+                                                    className="flex items-center gap-1.5"
+                                                    textClassName="text-[10px] text-red-500"
+                                                    confirmClassName="text-[10px] font-medium text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
+                                                    cancelClassName="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                                                />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="text-xs text-foreground flex-1">{m.name}</span>
+                                                <button
+                                                    onClick={() => startRenameMember(m.id, m.name)}
+                                                    aria-label={`重新命名 ${m.name}`}
+                                                    className="text-muted-foreground hover:text-foreground transition-colors"
+                                                >
+                                                    <Pencil className="w-3 h-3" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setConfirmDeleteMemberId(m.id)}
+                                                    aria-label={`刪除成員 ${m.name}`}
+                                                    className="text-muted-foreground hover:text-destructive transition-colors"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 ))}
                                 <div className="flex items-center gap-1.5 pt-0.5">
@@ -141,6 +267,7 @@ export function SubscriptionCard({
                                     <button
                                         onClick={handleAddMember}
                                         disabled={addingMember || !newMemberName.trim()}
+                                        aria-label="新增成員"
                                         className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors"
                                     >
                                         <Plus className="w-3.5 h-3.5" />
@@ -149,7 +276,7 @@ export function SubscriptionCard({
                             </div>
                         ) : (
                             <div className="text-xs text-muted-foreground mt-0.5">
-                                月費 NT${Math.round(sub.total_cost).toLocaleString()} · 每{sub.collection_period_months}個月收一次 ·{' '}
+                                月費 {privateMoney(sub.total_cost, '••••', { maximumFractionDigits: 0 })} · 每{sub.collection_period_months}個月收一次 · 共{sub.total_shares}份・我{sub.my_shares}份 ·{' '}
                                 {sub.members.map(m => m.name).join('、')}
                             </div>
                         )}
@@ -159,21 +286,24 @@ export function SubscriptionCard({
                             <ConfirmDelete
                                 onConfirm={handleDelete}
                                 onCancel={() => setConfirmDelete(false)}
+                                loading={deletingSub}
                                 className="flex items-center gap-2 pr-1"
                                 textClassName="text-xs text-red-500"
-                                confirmClassName="text-xs font-medium text-red-500 hover:text-red-600 transition-colors"
+                                confirmClassName="text-xs font-medium text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
                                 cancelClassName="text-xs text-muted-foreground hover:text-foreground transition-colors"
                             />
                         ) : (
                             <>
                                 <button
-                                    onClick={() => setEditing(true)}
+                                    onClick={openEdit}
+                                    aria-label={`編輯 ${sub.name}`}
                                     className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/50 transition-colors"
                                 >
                                     <Pencil className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                     onClick={() => setConfirmDelete(true)}
+                                    aria-label={`刪除 ${sub.name}`}
                                     className="p-1.5 text-muted-foreground hover:text-red-500 rounded-lg hover:bg-muted/50 transition-colors"
                                 >
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -186,8 +316,8 @@ export function SubscriptionCard({
                 {/* Summary bar */}
                 <div className="grid grid-cols-3 divide-x divide-border/40 border-t border-border/40 bg-muted/20">
                     {[
-                        { label: '月費', value: `NT$${Math.round(sub.total_cost).toLocaleString()}` },
-                        { label: `每人每${sub.collection_period_months}個月`, value: `NT$${Math.round(amount).toLocaleString()}` },
+                        { label: '月費', value: privateMoney(sub.total_cost, '••••', { maximumFractionDigits: 0 }) },
+                        { label: `每人每${sub.collection_period_months}個月`, value: privateMoney(amount, '••••', { maximumFractionDigits: 0 }) },
                         { label: '歷史週期', value: `${sub.cycles.length} 期` },
                     ].map(item => (
                         <div key={item.label} className="px-3 py-2 text-center">
@@ -224,7 +354,6 @@ export function SubscriptionCard({
                                     <CycleCard
                                         key={cycle.id}
                                         cycle={cycle}
-                                        amount={amount}
                                         onPaymentToggle={handlePaymentToggle}
                                         onDelete={() => handleDeleteCycle(cycle.id)}
                                     />

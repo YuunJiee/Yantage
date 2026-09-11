@@ -194,6 +194,9 @@ export const deleteSubscription = (id: number) =>
 export const addSubscriptionMember = (subscriptionId: number, name: string) =>
     apiFetch(`/subscriptions/${subscriptionId}/members`, { method: 'POST', ...json({ name }) });
 
+export const updateSubscriptionMember = (memberId: number, name: string) =>
+    apiFetch(`/subscriptions/members/${memberId}`, { method: 'PUT', ...json({ name }) });
+
 export const deleteSubscriptionMember = (memberId: number) =>
     apiFetch(`/subscriptions/members/${memberId}`, { method: 'DELETE' });
 
@@ -203,5 +206,5 @@ export const createCollectionCycle = (subscriptionId: number, data: { cycle_star
 export const deleteCollectionCycle = (cycleId: number) =>
     apiFetch(`/subscriptions/cycles/${cycleId}`, { method: 'DELETE' });
 
-export const updateCyclePayment = (paymentId: number, data: { paid_at: string | null; note?: string }) =>
+export const updateCyclePayment = (paymentId: number, data: { paid_at: string | null }) =>
     apiFetch<CyclePayment>(`/subscriptions/payments/${paymentId}`, { method: 'PATCH', ...json(data) });

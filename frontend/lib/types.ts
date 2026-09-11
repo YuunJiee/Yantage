@@ -138,8 +138,8 @@ export interface CyclePayment {
     id: number;
     cycle_id: number;
     member_id: number;
+    amount: number;
     paid_at: string | null;
-    note: string | null;
     member: SubscriptionMember;
 }
 

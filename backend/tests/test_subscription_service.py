@@ -63,3 +63,47 @@ def test_subscription_repo_has_no_create_cycle_method():
     """SubscriptionRepository must stay pure-SQL — the business rule
     (auto-creating payments) belongs on SubscriptionService only."""
     assert not hasattr(SubscriptionRepository, "create_cycle")
+
+
+# ── docs/specs/subscriptions.md R2: amount pinned at cycle-creation time ─────
+
+def test_create_cycle_payments_have_pinned_amount(db):
+    # total_cost=600/month, total_shares=4 -> 150/share/month, x6 months = 900
+    sub = _subscription_with_members(db, member_names=("A", "B", "C"))
+
+    cycle = SubscriptionService(db).create_cycle(
+        sub.id, schemas.CollectionCycleCreate(cycle_start="2026-01-01")
+    )
+
+    assert all(p.amount == 900 for p in cycle.payments)
+
+
+def test_create_cycle_amount_reflects_subscription_fields_at_creation_not_later(db):
+    sub = _subscription_with_members(db, member_names=("A",))
+
+    cycle1 = SubscriptionService(db).create_cycle(
+        sub.id, schemas.CollectionCycleCreate(cycle_start="2026-01-01")
+    )
+    assert cycle1.payments[0].amount == 900
+
+    SubscriptionRepository(db).update(sub.id, schemas.SubscriptionUpdate(total_cost=1200))
+
+    cycle2 = SubscriptionService(db).create_cycle(
+        sub.id, schemas.CollectionCycleCreate(cycle_start="2026-02-01")
+    )
+    assert cycle2.payments[0].amount == 1800
+
+    # cycle1's already-created payment must be untouched by the later edit
+    refetched_cycle1 = SubscriptionRepository(db).get_cycle(cycle1.id)
+    assert refetched_cycle1.payments[0].amount == 900
+
+
+def test_compute_per_member_amount_zero_when_total_shares_zero():
+    from backend.services.subscription_service import compute_per_member_amount
+
+    class FakeSub:
+        total_cost = 600
+        total_shares = 0
+        collection_period_months = 6
+
+    assert compute_per_member_amount(FakeSub()) == 0

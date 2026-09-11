@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet } from '@/components/ui/sheet';
 import { createSubscription } from '@/lib/api';
+import { useToast } from '@/components/ui/toast';
 
 interface NewSubForm {
     name: string;
@@ -26,6 +27,7 @@ const EMPTY_FORM: NewSubForm = {
 };
 
 export function NewSubscriptionDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+    const { toast } = useToast();
     const [form, setForm] = useState<NewSubForm>(EMPTY_FORM);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -61,6 +63,7 @@ export function NewSubscriptionDialog({ onClose, onSaved }: { onClose: () => voi
             onClose();
         } catch {
             setError('儲存失敗，請再試一次');
+            toast('新增訂閱失敗', 'error');
         } finally {
             setSaving(false);
         }

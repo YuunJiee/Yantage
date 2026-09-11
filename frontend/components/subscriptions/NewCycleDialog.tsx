@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet } from '@/components/ui/sheet';
 import { createCollectionCycle } from '@/lib/api';
+import { useToast } from '@/components/ui/toast';
 import type { Subscription } from '@/lib/types';
 import { todayStr } from './helpers';
 
@@ -17,6 +18,7 @@ export function NewCycleDialog({
     onClose: () => void;
     onSaved: () => void;
 }) {
+    const { toast } = useToast();
     const [cycleStart, setCycleStart] = useState(todayStr());
     const [note, setNote] = useState('');
     const [saving, setSaving] = useState(false);
@@ -27,6 +29,8 @@ export function NewCycleDialog({
             await createCollectionCycle(sub.id, { cycle_start: cycleStart, note: note || undefined });
             onSaved();
             onClose();
+        } catch {
+            toast('新增週期失敗', 'error');
         } finally {
             setSaving(false);
         }

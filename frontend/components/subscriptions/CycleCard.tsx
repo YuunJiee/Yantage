@@ -4,25 +4,34 @@ import { useState } from 'react';
 import { Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { ConfirmDelete } from '@/components/ui/confirm-delete';
 import type { CollectionCycle, CyclePayment } from '@/lib/types';
-import { formatDate } from './helpers';
+import { formatDate, sortPaymentsByMemberName } from './helpers';
 import { PaymentRow } from './PaymentRow';
 
 export function CycleCard({
     cycle,
-    amount,
     onPaymentToggle,
     onDelete,
 }: {
     cycle: CollectionCycle;
-    amount: number;
-    onPaymentToggle: (p: CyclePayment) => void;
-    onDelete: () => void;
+    onPaymentToggle: (p: CyclePayment) => Promise<void>;
+    onDelete: () => Promise<void>;
 }) {
     const [expanded, setExpanded] = useState(true);
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const paidCount = cycle.payments.filter(p => p.paid_at).length;
     const total = cycle.payments.length;
     const allPaid = paidCount === total && total > 0;
+    const sortedPayments = sortPaymentsByMemberName(cycle.payments);
+
+    const handleConfirmDelete = async () => {
+        setDeleting(true);
+        try {
+            await onDelete();
+        } finally {
+            setDeleting(false);
+        }
+    };
 
     return (
         <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
@@ -47,17 +56,18 @@ export function CycleCard({
 
             {expanded && (
                 <div className="px-4 pb-3 divide-y divide-border/40">
-                    {cycle.payments.map(p => (
-                        <PaymentRow key={p.id} payment={p} amount={amount} onToggle={onPaymentToggle} />
+                    {sortedPayments.map(p => (
+                        <PaymentRow key={p.id} payment={p} onToggle={onPaymentToggle} />
                     ))}
                     <div className="pt-2 flex justify-end items-center gap-2">
                         {confirmDelete ? (
                             <ConfirmDelete
-                                onConfirm={onDelete}
+                                onConfirm={handleConfirmDelete}
                                 onCancel={() => setConfirmDelete(false)}
+                                loading={deleting}
                                 className="flex items-center gap-2"
                                 textClassName="text-[11px] text-red-500"
-                                confirmClassName="text-[11px] font-medium text-red-500 hover:text-red-600 transition-colors"
+                                confirmClassName="text-[11px] font-medium text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
                                 cancelClassName="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                             />
                         ) : (

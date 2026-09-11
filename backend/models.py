@@ -109,7 +109,7 @@ class Subscription(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    total_cost = Column(Float)            # 每個收款週期的總費用
+    total_cost = Column(Float)            # 每月費用（TWD），涵蓋所有份數
     total_shares = Column(Integer)        # 總份數（所有人）
     my_shares = Column(Integer)           # 我自己負責的份數
     collection_period_months = Column(Integer, default=6)  # 收款週期（月）
@@ -150,8 +150,8 @@ class CyclePayment(Base):
     id = Column(Integer, primary_key=True, index=True)
     cycle_id = Column(Integer, ForeignKey("collection_cycles.id"), index=True)
     member_id = Column(Integer, ForeignKey("subscription_members.id"), index=True)
+    amount = Column(Float, nullable=True)     # Pinned at cycle-creation time — see SubscriptionService.create_cycle
     paid_at = Column(String, nullable=True)   # YYYY-MM-DD，null = 未付
-    note = Column(String, nullable=True)
 
     cycle = relationship("CollectionCycle", back_populates="payments")
     member = relationship("SubscriptionMember", back_populates="payments")

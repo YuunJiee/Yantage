@@ -24,7 +24,8 @@ UPDATE_BASE_PAIRS = [
     (schemas.BudgetCategoryUpdate, schemas.BudgetCategoryBase, set()),
     (schemas.IncomeItemUpdate, schemas.IncomeItemBase, set()),
     (schemas.SubscriptionUpdate, schemas.SubscriptionBase, set()),
-    (schemas.CyclePaymentUpdate, schemas.CyclePaymentBase, {"member_id"}),
+    (schemas.SubscriptionMemberUpdate, schemas.SubscriptionMemberBase, set()),
+    (schemas.CyclePaymentUpdate, schemas.CyclePaymentBase, {"member_id", "amount"}),
 ]
 
 
@@ -175,3 +176,63 @@ def test_income_item_create_accepts_zero_amount():
 def test_income_item_update_rejects_negative_amount():
     with pytest.raises(ValidationError):
         schemas.IncomeItemUpdate(amount=-1)
+
+
+# ── docs/specs/subscriptions.md R6: Subscription validation ──────────────────
+
+def _sub_kwargs(**overrides):
+    base = dict(name="Netflix", total_cost=600, total_shares=4, my_shares=1)
+    base.update(overrides)
+    return base
+
+
+def test_subscription_create_rejects_negative_total_cost():
+    with pytest.raises(ValidationError):
+        schemas.SubscriptionCreate(**_sub_kwargs(total_cost=-1))
+
+
+def test_subscription_create_accepts_zero_total_cost():
+    sub = schemas.SubscriptionCreate(**_sub_kwargs(total_cost=0))
+    assert sub.total_cost == 0
+
+
+def test_subscription_create_rejects_zero_total_shares():
+    with pytest.raises(ValidationError):
+        schemas.SubscriptionCreate(**_sub_kwargs(total_shares=0))
+
+
+def test_subscription_create_rejects_zero_my_shares():
+    with pytest.raises(ValidationError):
+        schemas.SubscriptionCreate(**_sub_kwargs(my_shares=0))
+
+
+def test_subscription_create_rejects_my_shares_greater_than_total_shares():
+    with pytest.raises(ValidationError):
+        schemas.SubscriptionCreate(**_sub_kwargs(total_shares=2, my_shares=3))
+
+
+def test_subscription_create_accepts_my_shares_equal_to_total_shares():
+    sub = schemas.SubscriptionCreate(**_sub_kwargs(total_shares=2, my_shares=2))
+    assert sub.my_shares == 2
+
+
+def test_subscription_update_rejects_my_shares_greater_than_total_shares_when_both_given():
+    with pytest.raises(ValidationError):
+        schemas.SubscriptionUpdate(total_shares=2, my_shares=3)
+
+
+def test_subscription_update_allows_only_total_shares():
+    update = schemas.SubscriptionUpdate(total_shares=5)
+    assert update.total_shares == 5
+
+
+def test_subscription_update_rejects_negative_total_cost():
+    with pytest.raises(ValidationError):
+        schemas.SubscriptionUpdate(total_cost=-1)
+
+
+# ── docs/specs/subscriptions.md Decision 4: member rename ────────────────────
+
+def test_subscription_member_update_accepts_name():
+    update = schemas.SubscriptionMemberUpdate(name="New Name")
+    assert update.name == "New Name"

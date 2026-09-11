@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { Subscription } from '@/lib/types';
-import { perMemberAmount, formatDate } from './helpers';
+import type { Subscription, CyclePayment } from '@/lib/types';
+import { perMemberAmount, formatDate, sortPaymentsByMemberName } from './helpers';
 
 function makeSub(overrides: Partial<Subscription>): Subscription {
     return {
@@ -29,5 +29,26 @@ describe('perMemberAmount', () => {
 describe('formatDate', () => {
     it('replaces hyphens with slashes', () => {
         expect(formatDate('2026-09-11')).toBe('2026/09/11');
+    });
+});
+
+function makePayment(overrides: Partial<CyclePayment>): CyclePayment {
+    return {
+        id: 1, cycle_id: 1, member_id: 1, amount: 100, paid_at: null,
+        member: { id: 1, subscription_id: 1, name: 'Z' },
+        ...overrides,
+    } as CyclePayment;
+}
+
+describe('sortPaymentsByMemberName', () => {
+    it('sorts payments by member name, without mutating the input array', () => {
+        const original = [
+            makePayment({ id: 1, member: { id: 1, subscription_id: 1, name: 'Charlie' } }),
+            makePayment({ id: 2, member: { id: 2, subscription_id: 1, name: 'Alice' } }),
+            makePayment({ id: 3, member: { id: 3, subscription_id: 1, name: 'Bob' } }),
+        ];
+        const sorted = sortPaymentsByMemberName(original);
+        expect(sorted.map(p => p.member.name)).toEqual(['Alice', 'Bob', 'Charlie']);
+        expect(original.map(p => p.member.name)).toEqual(['Charlie', 'Alice', 'Bob']);
     });
 });

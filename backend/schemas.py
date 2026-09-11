@@ -1,6 +1,6 @@
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing import List, Optional
 from datetime import datetime
 
@@ -243,6 +243,9 @@ class SubscriptionMemberBase(BaseModel):
 class SubscriptionMemberCreate(SubscriptionMemberBase):
     pass
 
+class SubscriptionMemberUpdate(BaseModel):
+    name: Optional[str] = None
+
 class SubscriptionMember(SubscriptionMemberBase):
     id: int
     subscription_id: int
@@ -252,12 +255,11 @@ class SubscriptionMember(SubscriptionMemberBase):
 
 class CyclePaymentBase(BaseModel):
     member_id: int
+    amount: float
     paid_at: Optional[str] = None
-    note: Optional[str] = None
 
 class CyclePaymentUpdate(BaseModel):
     paid_at: Optional[str] = None
-    note: Optional[str] = None
 
 class CyclePayment(CyclePaymentBase):
     id: int
@@ -290,20 +292,32 @@ class CollectionCycle(CollectionCycleBase):
 
 class SubscriptionBase(BaseModel):
     name: str
-    total_cost: float
-    total_shares: int
-    my_shares: int
+    total_cost: float = Field(ge=0)
+    total_shares: int = Field(ge=1)
+    my_shares: int = Field(ge=1)
     collection_period_months: Optional[int] = 6
+
+    @model_validator(mode='after')
+    def _check_shares(self):
+        if self.my_shares > self.total_shares:
+            raise ValueError("my_shares must be <= total_shares")
+        return self
 
 class SubscriptionCreate(SubscriptionBase):
     members: List[SubscriptionMemberCreate] = []
 
 class SubscriptionUpdate(BaseModel):
     name: Optional[str] = None
-    total_cost: Optional[float] = None
-    total_shares: Optional[int] = None
-    my_shares: Optional[int] = None
+    total_cost: Optional[float] = Field(default=None, ge=0)
+    total_shares: Optional[int] = Field(default=None, ge=1)
+    my_shares: Optional[int] = Field(default=None, ge=1)
     collection_period_months: Optional[int] = None
+
+    @model_validator(mode='after')
+    def _check_shares(self):
+        if self.my_shares is not None and self.total_shares is not None and self.my_shares > self.total_shares:
+            raise ValueError("my_shares must be <= total_shares")
+        return self
 
 class Subscription(SubscriptionBase):
     id: int

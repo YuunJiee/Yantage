@@ -82,6 +82,16 @@ class SubscriptionRepository:
         self.db.refresh(member)
         return member
 
+    def update_member(self, member_id: int, data: schemas.SubscriptionMemberUpdate) -> models.SubscriptionMember | None:
+        member = self.db.query(models.SubscriptionMember).filter(models.SubscriptionMember.id == member_id).first()
+        if not member:
+            return None
+        for key, value in data.model_dump(exclude_unset=True).items():
+            setattr(member, key, value)
+        self.db.commit()
+        self.db.refresh(member)
+        return member
+
     def delete_member(self, member_id: int) -> bool:
         member = self.db.query(models.SubscriptionMember).filter(models.SubscriptionMember.id == member_id).first()
         if not member:
@@ -115,8 +125,8 @@ class SubscriptionRepository:
         self.db.flush()
         return cycle
 
-    def create_payment_row(self, cycle_id: int, member_id: int) -> models.CyclePayment:
-        payment = models.CyclePayment(cycle_id=cycle_id, member_id=member_id)
+    def create_payment_row(self, cycle_id: int, member_id: int, amount: float) -> models.CyclePayment:
+        payment = models.CyclePayment(cycle_id=cycle_id, member_id=member_id, amount=amount)
         self.db.add(payment)
         return payment
 
