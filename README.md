@@ -46,10 +46,11 @@ docker compose up --build
 ## 開發環境
 
 ```bash
-# 後端（Python 3.8+）
-cd backend && pip install -r requirements.txt
+# 後端（Python 3.8+）— 在專案根目錄執行，backend/ 內部用相對匯入（from . import ...），
+# 必須以 `backend.main` 這個套件路徑啟動，不能 cd 進 backend/ 再跑 uvicorn main:app
+pip install -r backend/requirements.txt
 cp .env.example .env
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 
 # 前端（Node.js 18+）
 cd frontend && npm install && npm run dev

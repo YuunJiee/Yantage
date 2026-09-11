@@ -24,9 +24,12 @@ if command -v conda &> /dev/null && conda env list | grep -q "asset-backend"; th
     conda activate asset-backend
 fi
 
-# Run uvicorn from project root to support relative imports in backend package
+# Run uvicorn from project root to support relative imports in backend package.
+# Use `python -m uvicorn` (not the bare `uvicorn` command) so this respects
+# whichever python `conda activate` just switched to — a stray ~/.local/bin/uvicorn
+# from a `pip install --user` shadows the conda env's uvicorn on PATH otherwise.
 export PYTHONPATH="$PROJECT_ROOT"
-uvicorn backend.main:app --reload --port 8000 &
+python -m uvicorn backend.main:app --reload --port 8000 &
 BACKEND_PID=$!
 
 # Start Frontend
