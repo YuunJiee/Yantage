@@ -6,6 +6,7 @@ from .. import schemas, database
 from ..repositories.asset_repo import AssetRepository
 from ..services import ticker_lookup_service
 from ..services.asset_service import AssetService
+from ..utils.provider_rules import is_provider_managed
 
 router = APIRouter(
     prefix="/api/assets",
@@ -44,8 +45,11 @@ def create_transaction_for_asset(
     asset_id: int, transaction: schemas.TransactionCreate, db: Session = Depends(database.get_db)
 ):
     repo = AssetRepository(db)
-    if repo.get(asset_id) is None:
+    asset = repo.get(asset_id)
+    if asset is None:
         raise HTTPException(status_code=404, detail="Asset not found")
+    if is_provider_managed(asset.source):
+        raise HTTPException(status_code=403, detail="Cannot add transactions to a provider-synced asset")
     return repo.create_transaction(transaction, asset_id)
 
 
@@ -55,8 +59,8 @@ def delete_transaction_endpoint(transaction_id: int, db: Session = Depends(datab
     tx = repo.get_transaction(transaction_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    if tx.asset.source == 'max':
-        raise HTTPException(status_code=403, detail="Cannot delete auto-synced MAX transactions")
+    if is_provider_managed(tx.asset.source):
+        raise HTTPException(status_code=403, detail="Cannot delete auto-synced transactions")
     repo.delete_transaction(transaction_id)
     return None
 
@@ -68,8 +72,8 @@ def update_transaction_endpoint(
     tx = AssetRepository(db).get_transaction(transaction_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    if tx.asset.source == 'max':
-        raise HTTPException(status_code=403, detail="Cannot edit auto-synced MAX transactions")
+    if is_provider_managed(tx.asset.source):
+        raise HTTPException(status_code=403, detail="Cannot edit auto-synced transactions")
     return AssetRepository(db).update_transaction(transaction_id, transaction)
 
 

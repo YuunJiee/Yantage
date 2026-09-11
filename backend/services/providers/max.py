@@ -83,27 +83,6 @@ class MaxProvider(ExchangeProvider):
                         pair_key = "usdttwd" if ticker == 'USDT' else f"{ticker.lower()}twd"
                         current_price = market_prices.get(pair_key, 0.0)
 
-                    # Fetch avg cost from trades
-                    avg_cost = 0.0
-                    if ticker != 'TWD':
-                        try:
-                            t_path = "/api/v3/wallet/spot/trades"
-                            t_params = {'market': f"{ticker.lower()}twd", 'limit': 500}
-                            t_headers, t_payload = sign_max_request(t_path, conn.api_key, conn.api_secret, t_params)
-                            t_qp = {k: v for k, v in t_payload.items() if k != 'path'}
-                            t_resp = requests.get(f"{BASE_URL}{t_path}", headers=t_headers, params=t_qp)
-                            if t_resp.status_code == 200:
-                                total_cost = total_vol = 0.0
-                                for t in t_resp.json():
-                                    if t['side'] in ('buy', 'bid'):
-                                        vol = float(t['volume'])
-                                        total_cost += vol * float(t['price'])
-                                        total_vol += vol
-                                if total_vol > 0:
-                                    avg_cost = total_cost / total_vol
-                        except Exception:
-                            pass
-
                     target_icon = get_icon_for_ticker(
                         ticker, AssetCategory.CRYPTO if ticker != 'TWD' else AssetCategory.FLUID
                     )
@@ -114,8 +93,6 @@ class MaxProvider(ExchangeProvider):
                         if current_price > 0:
                             db_asset.current_price = current_price
                             db_asset.last_updated_at = datetime.now()
-                        if avg_cost > 0:
-                            db_asset.manual_avg_cost = avg_cost
                         if ticker != 'TWD':
                             db_asset.sub_category = "Crypto"
                         if db_asset.icon != target_icon:
@@ -131,7 +108,6 @@ class MaxProvider(ExchangeProvider):
                             ticker=ticker, category=category, sub_category=sub_category,
                             source=Provider.MAX.value, icon=target_icon, include_in_net_worth=True,
                             current_price=current_price,
-                            manual_avg_cost=avg_cost if avg_cost > 0 else None,
                             connection_id=conn.id,
                         ))
                         repo.create_transaction(

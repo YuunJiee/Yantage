@@ -88,7 +88,7 @@ class WalletProvider(ExchangeProvider):
                         new_asset = repo.create(schemas.AssetCreate(
                             name=asset_name, ticker=native_ticker,
                             category=AssetCategory.CRYPTO, sub_category="Crypto",
-                            source="web3_wallet", include_in_net_worth=True,
+                            source=Provider.WALLET.value, include_in_net_worth=True,
                             network=network, connection_id=conn.id, decimals=18,
                         ))
                         repo.create_transaction(
@@ -137,7 +137,7 @@ class WalletProvider(ExchangeProvider):
                             new_asset = repo.create(schemas.AssetCreate(
                                 name=token['symbol'], ticker=ticker,
                                 category=AssetCategory.CRYPTO, sub_category="Token",
-                                source="web3_wallet", include_in_net_worth=True,
+                                source=Provider.WALLET.value, include_in_net_worth=True,
                                 network=network, connection_id=conn.id,
                                 contract_address=token['address'],
                                 decimals=decimals, icon=target_icon,

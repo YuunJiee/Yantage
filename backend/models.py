@@ -23,14 +23,12 @@ class Asset(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     ticker = Column(String, index=True) # e.g., AAPL, BTC/USDT
-    category = Column(String, index=True) # e.g., Investment, Fluid, Fixed, Receivables, Liabilities
+    category = Column(String, index=True) # e.g., Fluid, Stock, Crypto, Fixed, Receivables, Liabilities
     sub_category = Column(String, nullable=True) # e.g., Cash, Stock, Real Estate
     current_price = Column(Float, default=0.0)
     last_updated_at = Column(DateTime, default=datetime.now)
-    is_favorite = Column(Boolean, default=False)
     include_in_net_worth = Column(Boolean, default=True)
     icon = Column(String, nullable=True)
-    manual_avg_cost = Column(Float, nullable=True)
     payment_due_day = Column(Integer, nullable=True)  # Day of month for credit card payment (1-31)
     source = Column(String, default="manual") # manual, max, binance
     

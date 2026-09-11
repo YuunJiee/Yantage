@@ -58,16 +58,21 @@ def test_create_connection_rejects_invalid_provider(client):
     assert res.status_code == 422
 
 
-def test_delete_transaction_for_max_synced_asset_returns_403(client):
-    asset = client.post(
-        "/api/assets/", json={"name": "BTC", "category": "Crypto", "source": "max"}
-    ).json()
-    tx = client.post(
-        f"/api/assets/{asset['id']}/transactions/",
-        json={"amount": 1.0, "buy_price": 0},
-    ).json()
+def test_delete_transaction_for_max_synced_asset_returns_403(client, db):
+    """Transaction creation on a provider-synced asset is itself blocked
+    (R5) — seed the transaction directly via the repo, as a MAX sync would,
+    to test the DELETE guard in isolation from the CREATE guard."""
+    from datetime import datetime
+    from backend import schemas
+    from backend.repositories.asset_repo import AssetRepository
 
-    res = client.delete(f"/api/assets/transactions/{tx['id']}")
+    repo = AssetRepository(db)
+    asset = repo.create(schemas.AssetCreate(name="BTC", category="Crypto", source="max"))
+    tx = repo.create_transaction(
+        schemas.TransactionCreate(amount=1.0, buy_price=0, date=datetime.now()), asset.id
+    )
+
+    res = client.delete(f"/api/assets/transactions/{tx.id}")
     assert res.status_code == 403
 
 
@@ -109,9 +114,11 @@ def test_put_price_update_interval_reschedules_the_scheduler(client):
         mock_reschedule.assert_called_once_with(30)
 
 
-def test_export_csv_returns_native_currency_value_not_twd(client):
-    """Pins R5: CSV 'Value (approx)' is quantity * current_price in the asset's
-    own currency, not the TWD-converted value_twd used elsewhere in the app."""
+def test_export_csv_returns_twd_converted_value(client):
+    """Pins docs/specs/assets-transactions.md Decision 6: CSV 'Value (approx)'
+    now reuses the same value_twd computation as the dashboard, instead of
+    the export's own separate quantity * native-price formula — so a USD
+    stock's exported value matches what the app shows everywhere else."""
     client.post(
         "/api/assets/", json={"name": "AAPL", "category": "Stock", "ticker": "AAPL", "current_price": 150.0}
     )
@@ -124,7 +131,8 @@ def test_export_csv_returns_native_currency_value_not_twd(client):
     assert "attachment; filename=ymoney_assets_" in res.headers["content-disposition"]
     lines = res.text.strip().splitlines()
     assert lines[0] == "ID,Name,Ticker,Category,Sub-Category,Source,Quantity,Current Price,Value (approx),Include in NW"
-    assert ",AAPL,AAPL,Stock,,manual,2.0,150.0,300.0,True" in lines[1]
+    # AAPL is USD-denominated (Stock, non-.TW ticker) -> value_twd = 300 * 32.0 (mocked rate)
+    assert ",AAPL,AAPL,Stock,,manual,2.0,150.0,9600.0,True" in lines[1]
 
 
 def test_reset_wipes_data_across_domains_added_after_the_original_six_tables(client):

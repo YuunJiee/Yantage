@@ -35,10 +35,8 @@ class AssetBase(BaseModel):
     ticker: Optional[str] = None
     category: AssetCategory
     sub_category: Optional[str] = None
-    is_favorite: Optional[bool] = False
     include_in_net_worth: Optional[bool] = True
     icon: Optional[str] = None
-    manual_avg_cost: Optional[float] = None
     payment_due_day: Optional[int] = None  # Day of month for credit card payment (1-31)
     value_twd: Optional[float] = 0.0 # Computed field
     unrealized_pl: Optional[float] = 0.0 # Computed field
@@ -60,10 +58,8 @@ class AssetUpdate(BaseModel):
     ticker: Optional[str] = None
     category: Optional[AssetCategory] = None
     sub_category: Optional[str] = None
-    is_favorite: Optional[bool] = None
     include_in_net_worth: Optional[bool] = None
     icon: Optional[str] = None
-    manual_avg_cost: Optional[float] = None
     payment_due_day: Optional[int] = None
     source: Optional[str] = None
     network: Optional[str] = None

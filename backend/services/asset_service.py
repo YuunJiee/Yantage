@@ -15,7 +15,12 @@ class AssetService:
         self.repo = AssetRepository(db)
 
     def _enrich(self, asset: models.Asset) -> models.Asset:
-        """Compute value_twd, unrealized_pl, roi as transient attributes."""
+        """Compute value_twd, unrealized_pl, roi as transient attributes.
+
+        invested_capital is a running remaining-cost-basis (average-cost
+        method): a sell reduces it by the same fraction of the position it
+        closes, so a partial sell doesn't leave stale cost basis behind for
+        units no longer held. See docs/specs/assets-transactions.md R2."""
         usdt_rate = get_usdt_twd_rate(self.db)
         is_usd = is_usd_denominated(asset)
 
@@ -24,12 +29,17 @@ class AssetService:
         asset.value_twd = native_value * usdt_rate if is_usd else native_value
 
         invested_capital = 0.0
-        for t in asset.transactions:
+        balance = 0.0
+        for t in sorted(asset.transactions, key=lambda t: t.date):
             if t.amount > 0:
                 cost = t.amount * (t.buy_price or 0.0)
                 if is_usd:
                     cost *= usdt_rate
                 invested_capital += cost
+            elif t.amount < 0 and balance > 0:
+                closed_fraction = min(1.0, abs(t.amount) / balance)
+                invested_capital -= invested_capital * closed_fraction
+            balance += t.amount
 
         if invested_capital > 0:
             asset.unrealized_pl = asset.value_twd - invested_capital

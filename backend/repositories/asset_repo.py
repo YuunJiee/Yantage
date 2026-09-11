@@ -102,7 +102,6 @@ class AssetRepository:
             category=data.category,
             sub_category=data.sub_category,
             include_in_net_worth=data.include_in_net_worth,
-            is_favorite=data.is_favorite,
             icon=data.icon,
             current_price=data.current_price if data.current_price is not None else (0.0 if data.ticker else 1.0),
             last_updated_at=datetime.now(),
