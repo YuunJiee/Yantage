@@ -4,6 +4,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 vi.mock('@/lib/hooks', () => ({
     useSetting: () => ({ value: '1', isError: false, refresh: vi.fn() }),
     useCategoryVisibility: () => ({ visibility: {}, toggle: vi.fn() }),
+    useIntegrations: () => ({ connections: [], isLoading: false, isError: false, refresh: vi.fn() }),
+    SWR_KEYS: { dashboard: 'dashboard', integrations: 'integrations' },
 }));
 
 vi.mock('@/lib/api', () => ({

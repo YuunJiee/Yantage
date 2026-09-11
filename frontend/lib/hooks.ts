@@ -24,6 +24,8 @@ import {
     fetchSubscriptions,
     fetchGoals,
     fetchForecast,
+    fetchIntegrations,
+    type IntegrationConnectionResponse,
     API_URL,
 } from './api';
 import type { DashboardData, BudgetCategory, IncomeItem, HistoryPoint, Subscription, Goal, GoalForecast } from './types';
@@ -41,6 +43,7 @@ export const SWR_KEYS = {
     subscriptions: `${API_URL}/subscriptions/`,
     goals:        `${API_URL}/goals/`,
     forecast:     `${API_URL}/stats/forecast`,
+    integrations: `${API_URL}/integrations/`,
 } as const;
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
@@ -161,6 +164,25 @@ export function useForecast() {
         forecastsByGoalId,
         isLoading,
         isError: !!error,
+    };
+}
+
+/**
+ * Exchange/wallet integration connections. Replaces the raw useEffect+fetch
+ * that AddAssetDialog and IntegrationManager each used to do independently
+ * (docs/specs/assets-transactions.md Decision 16) — the only two call sites
+ * in the app that bypassed SWR for data fetching.
+ */
+export function useIntegrations() {
+    const { data, error, isLoading, mutate } = useSWR<IntegrationConnectionResponse[]>(
+        SWR_KEYS.integrations,
+        fetchIntegrations,
+    );
+    return {
+        connections: data ?? [],
+        isLoading,
+        isError: !!error,
+        refresh: mutate,
     };
 }
 

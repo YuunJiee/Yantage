@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from '@/components/ui/MoneyInput';
 import { CustomSelect } from "@/components/ui/custom-select";
-import { createAsset, createTransaction, fetchIntegrations, type IntegrationConnectionResponse } from '@/lib/api';
+import { createAsset, createTransaction, deleteAsset } from '@/lib/api';
 import { useTickerLookup } from '@/lib/useTickerLookup';
 import { mutate } from 'swr';
-import { SWR_KEYS } from '@/lib/hooks';
+import { SWR_KEYS, useIntegrations } from '@/lib/hooks';
 import { IconPicker, getDefaultIcon } from './IconPicker';
-import { SUB_CATEGORIES, getSubCategoryLabel } from '@/lib/constants';
+import { SUB_CATEGORIES, getSubCategoryLabel, DASHBOARD_CATEGORY_ORDER, CATEGORY_ZH } from '@/lib/constants';
 import { emptyAddAssetForm } from './AddAssetDialog/formState';
 import { InvestmentDetailsFields } from './AddAssetDialog/InvestmentDetailsFields';
 import { FormSectionLabel as SectionLabel } from './ui/section-label';
@@ -30,20 +30,16 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
 
     // Web3 / Wallet State
     const [source, setSource] = useState('manual'); // manual, wallet
-    const [connections, setConnections] = useState<IntegrationConnectionResponse[]>([]);
+    const { connections: allConnections } = useIntegrations();
+    const connections = allConnections.filter((c) => c.provider === 'wallet');
     const [selectedConnectionId, setSelectedConnectionId] = useState<string>('');
     const [network, setNetwork] = useState('Ethereum');
     const [contractAddress, setContractAddress] = useState('');
     const [decimals, setDecimals] = useState('18');
 
-    const categories = [
-        { value: 'Fluid', label: '流動資產' },
-        { value: 'Crypto', label: '加密貨幣' },
-        { value: 'Stock', label: '股票' },
-        { value: 'Fixed', label: '固定資產' },
-        { value: 'Receivables', label: '應收帳款' },
-        { value: 'Liabilities', label: '負債' },
-    ];
+    // Matches DASHBOARD_CATEGORY_ORDER (the order used everywhere else) rather
+    // than its own list — see docs/specs/assets-transactions.md Decision 9.
+    const categories = DASHBOARD_CATEGORY_ORDER.map(cat => ({ value: cat, label: CATEGORY_ZH[cat] ?? cat }));
 
     const { fetchedPrice, clearPrice } = useTickerLookup(
         formData.ticker,
@@ -69,11 +65,6 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
             setNetwork('Ethereum');
             setContractAddress('');
             setDecimals('18');
-
-            // Fetch integrations
-            fetchIntegrations().then(data => {
-                setConnections(data.filter((c) => c.provider === 'wallet'));
-            }).catch(console.error);
         }
     }, [isOpen, defaultCategory]);
 
@@ -126,11 +117,19 @@ export function AddAssetDialog({ isOpen, onClose, defaultCategory }: AddAssetDia
                 // Use manual avg cost if provided, otherwise fetched price, otherwise 0/1
                 const buyPrice = formData.manualAvgCost ? parseFloat(formData.manualAvgCost) : (fetchedPrice || (formData.ticker ? 0 : 1.0));
 
-                await createTransaction(assetRes.id, {
-                    amount: initialBalance,
-                    buy_price: buyPrice,
-                    date: new Date().toISOString(),
-                });
+                try {
+                    await createTransaction(assetRes.id, {
+                        amount: initialBalance,
+                        buy_price: buyPrice,
+                        date: new Date().toISOString(),
+                    });
+                } catch (txError) {
+                    // Don't leave a zero-balance orphan asset behind if the
+                    // initial transaction fails — undo the asset creation
+                    // too (docs/specs/assets-transactions.md Decision 10).
+                    await deleteAsset(assetRes.id).catch(() => {});
+                    throw txError;
+                }
             }
 
             mutate(SWR_KEYS.dashboard);

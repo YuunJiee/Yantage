@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoneyInput } from '@/components/ui/MoneyInput';
 import { CustomSelect } from "@/components/ui/custom-select";
 import { updateAsset, deleteAsset } from '@/lib/api';
 import type { Asset } from '@/lib/types';
@@ -10,8 +9,12 @@ import { mutate } from 'swr';
 import { Trash2, ArrowLeft } from 'lucide-react';
 import { IconPicker, getDefaultIcon } from '../IconPicker';
 import { ConfirmDelete } from '@/components/ui/confirm-delete';
-import { SUB_CATEGORIES, getSubCategoryLabel } from '@/lib/constants';
+import { SUB_CATEGORIES, getSubCategoryLabel, DASHBOARD_CATEGORY_ORDER, CATEGORY_ZH } from '@/lib/constants';
 import { SWR_KEYS } from '@/lib/hooks';
+import { isProviderManaged } from '@/lib/providerRules';
+import { useToast } from '@/components/ui/toast';
+
+const CATEGORY_OPTIONS = DASHBOARD_CATEGORY_ORDER.map(cat => ({ value: cat, label: CATEGORY_ZH[cat] ?? cat }));
 
 interface EditAssetViewProps {
     asset: Asset | null;
@@ -20,6 +23,7 @@ interface EditAssetViewProps {
 }
 
 export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
+    const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -30,7 +34,6 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
         subCategory: string;
         includeInNetWorth: boolean;
         icon: string;
-        manualAvgCost: string | number;
         paymentDueDay: string | number;
     }>({
         name: '',
@@ -39,7 +42,6 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
         subCategory: '',
         includeInNetWorth: true,
         icon: '',
-        manualAvgCost: 0,
         paymentDueDay: ''
     });
 
@@ -52,11 +54,12 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                 subCategory: asset.sub_category || '',
                 includeInNetWorth: asset.include_in_net_worth !== undefined ? asset.include_in_net_worth : true,
                 icon: asset.icon || '',
-                manualAvgCost: asset.manual_avg_cost || '',
                 paymentDueDay: asset.payment_due_day || ''
             });
         }
     }, [asset]);
+
+    const isManaged = isProviderManaged(asset?.source);
 
     const handleDelete = async () => {
         if (!asset) return;
@@ -66,7 +69,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
             mutate(SWR_KEYS.dashboard);
             onClose();
         } catch {
-            alert('Delete failed');
+            toast('刪除資產失敗', 'error');
         } finally {
             setLoading(false);
         }
@@ -90,7 +93,6 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                 sub_category: formData.subCategory || null,
                 include_in_net_worth: formData.includeInNetWorth,
                 icon: finalIcon,
-                manual_avg_cost: formData.manualAvgCost ? Number(formData.manualAvgCost) : null,
                 payment_due_day: formData.category === 'Liabilities' && formData.paymentDueDay ? parseInt(formData.paymentDueDay as string) : null
             });
 
@@ -98,7 +100,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
             onClose();
         } catch (error) {
             console.error("Failed to update asset", error);
-            alert("Error updating asset");
+            toast('更新資產失敗', 'error');
         } finally {
             setLoading(false);
         }
@@ -110,13 +112,13 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
         <div className="px-1">
             <form onSubmit={handleSubmit} className="space-y-6">
 
-                {asset.source === 'max' && (
+                {isManaged && (
                     <div className="bg-blue-500/10 text-blue-600 px-4 py-3 rounded-xl text-sm font-medium mb-4 flex items-center gap-2">
-                        🔒 此資產由 MAX 整合自動管理，已停用手動編輯以確保數據一致性。
+                        🔒 此資產由整合自動管理，已停用手動編輯以確保數據一致性。
                     </div>
                 )}
 
-                <fieldset disabled={asset.source === 'max'} className="space-y-6 opacity-100 disabled:opacity-80">
+                <fieldset disabled={isManaged} className="space-y-6 opacity-100 disabled:opacity-80">
                     {/* Name & Icon */}
                     <div className="flex gap-4 items-end">
                         <div className="space-y-2">
@@ -136,6 +138,19 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                         </div>
                     </div>
 
+                    <div className="space-y-2">
+                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">分類</Label>
+                        <CustomSelect
+                            value={formData.category}
+                            onChange={(val) => setFormData({
+                                ...formData,
+                                category: val as Asset['category'],
+                                subCategory: SUB_CATEGORIES[val]?.[0] || '',
+                            })}
+                            options={CATEGORY_OPTIONS}
+                        />
+                    </div>
+
                     {formData.category !== 'Receivables' && (
                         <div className="space-y-2">
                             <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">子類別</Label>
@@ -148,24 +163,13 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                     )}
 
                     {(formData.category === 'Stock' || formData.category === 'Crypto') && (
-                        <div className="flex gap-4">
-                            <div className="space-y-2 flex-1">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">股票代號</Label>
-                                <Input
-                                    className="h-11 rounded-xl"
-                                    value={formData.ticker}
-                                    onChange={(e) => setFormData({ ...formData, ticker: e.target.value })}
-                                />
-                            </div>
-                            <div className="space-y-2 flex-1">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">平均成本 (TWD)</Label>
-                                <MoneyInput
-                                    className="h-11 rounded-xl"
-                                    value={formData.manualAvgCost}
-                                    onChange={(e) => setFormData({ ...formData, manualAvgCost: e.target.value })}
-                                    placeholder="Optional"
-                                />
-                            </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">股票代號</Label>
+                            <Input
+                                className="h-11 rounded-xl"
+                                value={formData.ticker}
+                                onChange={(e) => setFormData({ ...formData, ticker: e.target.value })}
+                            />
                         </div>
                     )}
 
@@ -210,7 +214,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                                 <ArrowLeft className="w-4 h-4 mr-1" /> 返回
                             </Button>
                         )}
-                        {asset.source !== 'max' && (
+                        {!isManaged && (
                             confirmDelete ? (
                                 <ConfirmDelete
                                     onConfirm={handleDelete}
@@ -225,7 +229,7 @@ export function EditAssetView({ asset, onClose, onBack }: EditAssetViewProps) {
                         )}
                     </div>
                     <div className="flex gap-2">
-                        {asset.source !== 'max' && (
+                        {!isManaged && (
                             <Button type="submit" disabled={loading}>
                                 {loading ? '載入中...' : '儲存變更'}
                             </Button>

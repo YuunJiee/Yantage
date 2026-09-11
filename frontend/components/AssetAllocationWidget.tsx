@@ -5,20 +5,11 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recha
 import { usePrivacy } from "@/components/PrivacyProvider";
 import { cn, formatMoney } from "@/lib/utils";
 import type { Asset } from '@/lib/types';
-import { CATEGORY_ZH, CATEGORY_CSS_VARS } from '@/lib/constants';
+import { CATEGORY_ZH, CATEGORY_CSS_VARS, getSubCategoryLabel } from '@/lib/constants';
+import { getAssetDisplayValue } from './AssetAccordion/helpers';
 
 const CHART_THEMES: Record<string, string[]> = {
     'Morandi': ['#A4C3B2', '#E0D5C3', '#D4A59A', '#8199A6', '#8ABF9E', '#C5AFA5'],
-};
-
-const SUBCATEGORY_ZH: Record<string, string> = {
-    'Cash': '現金', 'E-Wallet': '電子錢包', 'Debit Card': '簽帳金融卡', 'Other': '其他',
-    'Fund': '基金', 'Stock': '股票', 'TW Stock': '台股', 'US Stock': '美股',
-    'Mutual Fund': '共同基金', 'Crypto': '加密貨幣', 'Token': '加密貨幣', 'Coin': '加密貨幣',
-    'Stablecoin': '穩定幣', 'DeFi': 'DeFi', 'NFT': 'NFT',
-    'Other Investment': '其他投資', 'Real Estate': '房地產', 'Car': '車輛',
-    'Other Fixed Asset': '其他固定資產', 'Credit Card': '信用卡',
-    'Loan': '貸款', 'Payable': '應付帳款', 'Other Liability': '其他負債',
 };
 
 interface AssetAllocationWidgetProps {
@@ -34,8 +25,7 @@ export function AssetAllocationWidget({ assets }: AssetAllocationWidgetProps) {
         assets.forEach(asset => {
             if (asset.include_in_net_worth === false) return;
             const key = viewMode === 'Category' ? (asset.category || 'Other') : (asset.sub_category || 'Other');
-            const val = Number(asset.value_twd) || 0;
-            map.set(key, (map.get(key) || 0) + val);
+            map.set(key, (map.get(key) || 0) + getAssetDisplayValue(asset));
         });
         return Array.from(map.entries())
             .map(([name, value]) => ({ name, value }))
@@ -49,7 +39,7 @@ export function AssetAllocationWidget({ assets }: AssetAllocationWidgetProps) {
     const colors = CHART_THEMES['Morandi'];
 
     const getTranslatedName = (name: string) =>
-        viewMode === 'SubCategory' ? (SUBCATEGORY_ZH[name] ?? name) : (CATEGORY_ZH[name] ?? name);
+        viewMode === 'SubCategory' ? getSubCategoryLabel(name) : (CATEGORY_ZH[name] ?? name);
 
     return (
         <div>

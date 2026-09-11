@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { updateTransaction, deleteTransaction } from "@/lib/api";
 import { MoneyInput } from "@/components/ui/MoneyInput";
+import { ConfirmDelete } from "@/components/ui/confirm-delete";
+import { useToast } from "@/components/ui/toast";
 import { Trash2 } from "lucide-react";
 
 import type { Transaction } from '@/lib/types';
@@ -16,6 +18,7 @@ interface TransactionEditDialogProps {
 }
 
 export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess }: TransactionEditDialogProps) {
+    const { toast } = useToast();
     const [date, setDate] = useState("");
     const [amount, setAmount] = useState("");
     const [price, setPrice] = useState("");
@@ -45,7 +48,7 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
             onClose();
         } catch (error) {
             console.error("Failed to update transaction", error);
-            alert('更新交易失敗');
+            toast('更新交易失敗', 'error');
         } finally {
             setLoading(false);
         }
@@ -60,7 +63,7 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
             onClose();
         } catch (error) {
             console.error("Failed to delete transaction", error);
-            alert('刪除交易失敗');
+            toast('刪除交易失敗', 'error');
         } finally {
             setLoading(false);
         }
@@ -109,17 +112,11 @@ export function TransactionEditDialog({ isOpen, onClose, transaction, onSuccess 
                 {/* ── 操作 ────────────────────────────────── */}
                 <div className="border-t border-border/20 pt-4 flex items-center justify-between">
                     {confirmDelete ? (
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-destructive">確定刪除？</span>
-                            <button type="button" onClick={handleDelete} disabled={loading}
-                                className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50">
-                                {loading ? '刪除中…' : '確定'}
-                            </button>
-                            <button type="button" onClick={() => setConfirmDelete(false)}
-                                className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                                取消
-                            </button>
-                        </div>
+                        <ConfirmDelete
+                            onConfirm={handleDelete}
+                            onCancel={() => setConfirmDelete(false)}
+                            loading={loading}
+                        />
                     ) : (
                         <button type="button" onClick={() => setConfirmDelete(true)} disabled={loading}
                             className="flex items-center gap-1.5 text-sm text-destructive/70 hover:text-destructive transition-colors disabled:opacity-50">

@@ -1,21 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet } from "@/components/ui/sheet";
 import { Select } from "@/components/ui/select";
+import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { Trash2, Plus, Wallet, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
 import { mutate } from 'swr';
-import { fetchIntegrations, createConnection, deleteConnection, syncProvider, type IntegrationConnectionResponse } from '@/lib/api';
+import { createConnection, deleteConnection, syncProvider } from '@/lib/api';
 import { PROVIDERS, getProviderInfo } from '@/lib/providers';
-import { SWR_KEYS } from '@/lib/hooks';
+import { SWR_KEYS, useIntegrations } from '@/lib/hooks';
 import { cn } from "@/lib/utils";
 
 export function IntegrationManager() {
-    const [connections, setConnections] = useState<IntegrationConnectionResponse[]>([]);
+    const { connections, refresh: refreshConnections } = useIntegrations();
     const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+    const [deleting, setDeleting] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [addError, setAddError] = useState('');
@@ -27,18 +29,6 @@ export function IntegrationManager() {
     const [apiKey, setApiKey] = useState("");
     const [apiSecret, setApiSecret] = useState("");
     const [address, setAddress] = useState("");
-
-    const fetchConnections = async () => {
-        try {
-            setConnections(await fetchIntegrations());
-        } catch (e) {
-            console.error(e);
-        }
-    };
-
-    useEffect(() => {
-        fetchConnections();
-    }, []);
 
     const handleAdd = async () => {
         setLoading(true);
@@ -56,7 +46,7 @@ export function IntegrationManager() {
 
             await createConnection(payload);
             setIsOpen(false);
-            fetchConnections();
+            refreshConnections();
             setNewName("");
             setApiKey("");
             setApiSecret("");
@@ -73,12 +63,19 @@ export function IntegrationManager() {
     };
 
     const handleDelete = async (id: number) => {
+        setDeleting(true);
         try {
             await deleteConnection(id);
             setPendingDeleteId(null);
-            fetchConnections();
+            // A deleted connection cascades to delete every asset (and its
+            // transaction history) synced from it — refresh both lists so
+            // stale assets don't linger until the next periodic revalidation.
+            refreshConnections();
+            mutate(SWR_KEYS.dashboard);
         } catch (e) {
             console.error(e);
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -145,16 +142,16 @@ export function IntegrationManager() {
                                     <span className="text-[10px] text-muted-foreground ml-1 hidden md:inline">含自動掃描</span>
                                 )}
                                 {pendingDeleteId === conn.id ? (
-                                    <div className="flex items-center gap-1.5">
-                                        <button onClick={() => handleDelete(conn.id)}
-                                            className="text-xs font-medium text-destructive hover:text-destructive/80 transition-colors">
-                                            確定
-                                        </button>
-                                        <button onClick={() => setPendingDeleteId(null)}
-                                            className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                                            取消
-                                        </button>
-                                    </div>
+                                    <ConfirmDelete
+                                        label="將一併刪除此連線同步的所有資產與交易紀錄，且無法復原"
+                                        onConfirm={() => handleDelete(conn.id)}
+                                        onCancel={() => setPendingDeleteId(null)}
+                                        loading={deleting}
+                                        className="flex items-center gap-1.5"
+                                        textClassName="text-[11px] text-destructive max-w-[160px] leading-tight"
+                                        confirmClassName="text-xs font-medium text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50 shrink-0"
+                                        cancelClassName="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                                    />
                                 ) : (
                                     <Button variant="ghost" onClick={() => setPendingDeleteId(conn.id)} className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive">
                                         <Trash2 className="w-4 h-4" />

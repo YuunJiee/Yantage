@@ -103,11 +103,12 @@ export function getDefaultIcon(category: string, subCategory: string = ''): stri
         if (sub.includes('card')) return 'CreditCard';
         return 'Banknote';
     }
-    if (cat === 'investment') {
-        if (sub.includes('stock')) return 'TrendingUp';
-        if (sub.includes('crypto')) return 'Bitcoin';
+    if (cat === 'stock') {
         if (sub.includes('fund')) return 'PieChart';
-        return 'Gem';
+        return 'TrendingUp';
+    }
+    if (cat === 'crypto') {
+        return 'Bitcoin';
     }
     if (cat === 'fixed') {
         if (sub.includes('estate') || sub.includes('house')) return 'Home';

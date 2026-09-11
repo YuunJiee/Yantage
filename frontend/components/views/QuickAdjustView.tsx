@@ -101,13 +101,15 @@ export function QuickAdjustView({ asset, onClose, onBack }: QuickAdjustViewProps
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
                     />
-                    {diff !== null && (
+                    {diff !== null ? (
                         <p className="text-[10px] text-muted-foreground text-right tabular-nums">
                             {mode === 'set'
                                 ? `調整 ${diff >= 0 ? '+' : ''}${diff.toLocaleString()}`
                                 : `新餘額 $${resultBalance?.toLocaleString()}`}
                         </p>
-                    )}
+                    ) : value !== '' ? (
+                        <p className="text-[10px] text-red-500 text-right">請輸入有效數字</p>
+                    ) : null}
                 </div>
 
                 {/* ── 日期 ────────────────────────────────── */}
@@ -144,7 +146,7 @@ export function QuickAdjustView({ asset, onClose, onBack }: QuickAdjustViewProps
                         ← 返回
                     </Button>
                 )}
-                <Button type="submit" disabled={loading || !value} className="ml-auto">
+                <Button type="submit" disabled={loading || !value || isNaN(parsedValue)} className="ml-auto">
                     {loading ? '確認中…' : '確認'}
                 </Button>
             </div>

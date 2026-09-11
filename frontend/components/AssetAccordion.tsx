@@ -66,7 +66,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onActionC
         const others: Asset[] = [];
 
         categoryAssets.forEach(asset => {
-            if (asset.source === 'web3_wallet') {
+            if (asset.source === 'wallet') {
                 const key = asset.ticker || asset.name;
                 if (!web3Groups[key]) web3Groups[key] = [];
                 web3Groups[key].push(asset);
@@ -260,7 +260,7 @@ export function AssetAccordion({ category, title, totalAmount, assets, onActionC
                                             </div>
                                         </div>
 
-                                        {/* Right side: favorite + amount */}
+                                        {/* Right side: amount */}
                                         <div className="text-right shrink-0">
                                             <div className="text-sm font-semibold text-foreground tabular-nums">
                                                 {privateMoney(value, '••••', { maximumFractionDigits: 0 })}

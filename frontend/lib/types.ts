@@ -23,8 +23,6 @@ export interface Asset {
     icon?: string | null;
     current_price?: number;
     include_in_net_worth?: boolean;
-    is_favorite?: boolean;
-    manual_avg_cost?: number | null;
     payment_due_day?: number | null;
     // Computed fields returned by /api/dashboard/
     value_twd?: number;

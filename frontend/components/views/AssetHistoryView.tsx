@@ -2,6 +2,8 @@ import { cn } from '@/lib/utils';
 import { TrendingUp, TrendingDown, ArrowRightLeft, Pencil, Wallet } from 'lucide-react';
 import { SectionLabel } from '@/components/ui/section-label';
 import type { Asset } from '@/lib/types';
+import { isProviderManaged } from '@/lib/providerRules';
+import { getAssetDisplayValue } from '../AssetAccordion/helpers';
 
 interface AssetHistoryDialogProps {
     isOpen: boolean;
@@ -29,10 +31,10 @@ export function AssetHistoryView({ asset, onEdit, onAdjustBalance }: Omit<AssetH
         .reverse();
 
     const totalQuantity = asset.transactions?.reduce((sum, tx) => sum + tx.amount, 0) || 0;
-    const totalValue = asset.value_twd ?? (asset.current_price ?? 0) * totalQuantity;
+    const totalValue = getAssetDisplayValue(asset);
     const isCrypto = asset.sub_category?.includes('Crypto');
 
-    const isManaged = ['max', 'pionex', 'binance'].includes(asset['source'] || '');
+    const isManaged = isProviderManaged(asset.source);
 
     return (
         <div className="space-y-5">

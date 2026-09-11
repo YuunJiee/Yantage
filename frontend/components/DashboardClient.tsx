@@ -5,6 +5,7 @@ import { useCategoryVisibility, useDashboard } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 import { Plus, Target, Link as LinkIcon } from 'lucide-react';
 import { CATEGORY_COLORS, CATEGORY_ZH, DASHBOARD_CATEGORY_ORDER, POSITIVE_CATEGORIES } from '@/lib/constants';
+import { getAssetDisplayValue } from './AssetAccordion/helpers';
 import type { Goal, DashboardData } from '@/lib/types';
 
 import { NetWorthHero } from './dashboard/NetWorthHero';
@@ -38,11 +39,7 @@ export function DashboardClient({ data: initialData }: DashboardClientProps) {
     const getCategoryTotal = (cat: string) =>
         assets
             .filter(a => a.category === cat && a.include_in_net_worth !== false)
-            .reduce((sum, a) => {
-                if (a.value_twd !== undefined) return sum + a.value_twd;
-                const qty = a.transactions?.reduce((q, t) => q + t.amount, 0) ?? 0;
-                return sum + (a.current_price ?? 0) * qty;
-            }, 0);
+            .reduce((sum, a) => sum + getAssetDisplayValue(a), 0);
 
     const totalPositiveAssets = POSITIVE_CATEGORIES
         .reduce((sum, cat) => sum + getCategoryTotal(cat), 0);
