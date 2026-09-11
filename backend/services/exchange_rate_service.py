@@ -3,9 +3,11 @@ import requests
 import logging
 import time
 from sqlalchemy.orm import Session
-from .. import models
+from ..repositories.setting_repo import SettingRepository
 
 logger = logging.getLogger(__name__)
+
+_RATE_SETTING_KEY = "exchange_rate_usdtwd"
 
 # Cache duration in seconds (e.g., 5 minutes)
 CACHE_DURATION = 300
@@ -37,22 +39,16 @@ def get_usdt_twd_rate(db: Session = None) -> float:
         # Update DB if session provided
         if db:
             try:
-                setting = db.query(models.SystemSetting).filter_by(key="exchange_rate_usdtwd").first()
-                if not setting:
-                    setting = models.SystemSetting(key="exchange_rate_usdtwd", value=str(rate))
-                    db.add(setting)
-                else:
-                    setting.value = str(rate)
-                db.commit()
+                SettingRepository(db).upsert(_RATE_SETTING_KEY, str(rate))
             except Exception as e:
                 logger.error(f"Failed to update exchange rate in DB: {e}")
-                
+
         return rate
-        
+
     # Fallback to DB if external fetch failed
     if db:
         try:
-            setting = db.query(models.SystemSetting).filter_by(key="exchange_rate_usdtwd").first()
+            setting = SettingRepository(db).get(_RATE_SETTING_KEY)
             if setting:
                 return float(setting.value)
         except:

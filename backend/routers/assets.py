@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
-from .. import schemas, models, database
+from .. import schemas, database
 from ..repositories.asset_repo import AssetRepository
+from ..services import ticker_lookup_service
+from ..services.asset_service import AssetService
 
 router = APIRouter(
     prefix="/api/assets",
@@ -15,7 +17,7 @@ router = APIRouter(
 @router.get("", include_in_schema=False)
 @router.get("/", response_model=List[schemas.Asset])
 def read_assets(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
-    return AssetRepository(db).list_all(skip=skip, limit=limit)
+    return AssetService(db).list_all(skip=skip, limit=limit)
 
 
 @router.post("", include_in_schema=False)
@@ -32,24 +34,14 @@ def update_asset(asset_id: int, asset: schemas.AssetUpdate, db: Session = Depend
     return db_asset
 
 
-@router.get("/lookup/{ticker}")
+@router.get("/lookup/{ticker}", response_model=schemas.TickerLookupResult)
 def lookup_ticker(ticker: str):
-    import yfinance as yf
-    try:
-        if ticker.isdigit() and len(ticker) == 4:
-            ticker = f"{ticker}.TW"
-        t = yf.Ticker(ticker)
-        info = t.info
-        name = info.get('longName') or info.get('shortName') or ticker
-        current_price = info.get('currentPrice') or info.get('regularMarketPrice') or info.get('previousClose')
-        return {"name": name, "symbol": ticker, "price": current_price}
-    except Exception as e:
-        return {"name": "", "error": str(e)}
+    return ticker_lookup_service.lookup_ticker(ticker)
 
 
 @router.get("/{asset_id}", response_model=schemas.Asset)
 def read_asset(asset_id: int, db: Session = Depends(database.get_db)):
-    db_asset = AssetRepository(db).get(asset_id)
+    db_asset = AssetService(db).get(asset_id)
     if db_asset is None:
         raise HTTPException(status_code=404, detail="Asset not found")
     return db_asset
@@ -76,7 +68,7 @@ def delete_transaction_endpoint(transaction_id: int, db: Session = Depends(datab
 def update_transaction_endpoint(
     transaction_id: int, transaction: schemas.TransactionUpdate, db: Session = Depends(database.get_db)
 ):
-    tx = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
+    tx = AssetRepository(db).get_transaction(transaction_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
     if tx.asset.source == 'max':

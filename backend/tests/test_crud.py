@@ -55,15 +55,6 @@ def test_get_asset_missing_returns_none(db):
     assert AssetRepository(db).get(9999) is None
 
 
-def test_get_asset_computes_value_twd_fluid(db):
-    """Fluid assets are TWD-denominated: value_twd = price × qty."""
-    repo = AssetRepository(db)
-    asset = repo.create(schemas.AssetCreate(name="Savings", category="Fluid", current_price=1.0))
-    repo.create_transaction(_transaction(amount=50_000.0, buy_price=1.0), asset.id)
-    fetched = repo.get(asset.id)
-    assert fetched.value_twd == pytest.approx(50_000.0)
-
-
 # ── AssetRepository.list_all ──────────────────────────────────────────────────
 
 def test_list_all_empty(db):
@@ -76,26 +67,6 @@ def test_list_all_returns_all(db):
     repo.create(_fluid_asset("B"))
     repo.create(_fluid_asset("C"))
     assert len(repo.list_all()) == 3
-
-
-def test_list_all_value_twd_no_transactions(db):
-    repo = AssetRepository(db)
-    repo.create(_fluid_asset())
-    assert repo.list_all()[0].value_twd == pytest.approx(0.0)
-
-
-def test_list_all_value_twd_with_transaction(db):
-    repo = AssetRepository(db)
-    asset = repo.create(schemas.AssetCreate(name="ETF", category="Fluid", current_price=100.0))
-    repo.create_transaction(_transaction(amount=10.0, buy_price=90.0), asset.id)
-    assert repo.list_all()[0].value_twd == pytest.approx(1_000.0)
-
-
-def test_list_all_roi_computed(db):
-    repo = AssetRepository(db)
-    asset = repo.create(schemas.AssetCreate(name="Stock", category="Stock", ticker="2330.TW", current_price=1_000.0))
-    repo.create_transaction(_transaction(amount=1.0, buy_price=800.0), asset.id)
-    assert repo.list_all()[0].roi == pytest.approx(25.0)
 
 
 # ── AssetRepository.create_transaction ───────────────────────────────────────

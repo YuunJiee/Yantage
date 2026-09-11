@@ -8,9 +8,9 @@ from collections import defaultdict
 from datetime import datetime, timedelta, date
 from sqlalchemy.orm import Session
 
-from .. import models
 from ..repositories.asset_repo import AssetRepository
 from ..repositories.goal_repo import GoalRepository
+from ..repositories.net_worth_history_repo import NetWorthHistoryRepository
 from ..utils.math import safe_float
 from ..utils.currency import is_usd_denominated
 from ..services.exchange_rate_service import get_usdt_twd_rate
@@ -78,12 +78,7 @@ def get_net_worth_history(db: Session, range_str: str = "30d") -> list[dict]:
         start_date = parse_range(range_str)
 
         # Fast path: serve from pre-computed daily snapshots when coverage ≥ 80%.
-        snapshots = (
-            db.query(models.NetWorthHistory)
-            .filter(models.NetWorthHistory.date >= start_date.strftime("%Y-%m-%d"))
-            .order_by(models.NetWorthHistory.date)
-            .all()
-        )
+        snapshots = NetWorthHistoryRepository(db).list_since(start_date.strftime("%Y-%m-%d"))
         expected_days = (today - start_date).days + 1
         if snapshots and len(snapshots) >= max(1, int(expected_days * 0.8)):
             return [

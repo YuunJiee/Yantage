@@ -3,8 +3,8 @@ import logging
 from datetime import datetime
 from sqlalchemy.orm import Session
 
-from .. import models
-from ..repositories.asset_repo import AssetRepository
+from ..repositories.net_worth_history_repo import NetWorthHistoryRepository
+from .asset_service import AssetService
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ def snapshot_net_worth(db: Session) -> None:
     can serve from fast snapshot reads instead of recalculating every request.
     """
     today = datetime.now().strftime("%Y-%m-%d")
-    assets = AssetRepository(db).list_all()
+    assets = AssetService(db).list_all()
 
     net_worth = 0.0
     breakdown: dict[str, float] = {}
@@ -42,13 +42,7 @@ def snapshot_net_worth(db: Session) -> None:
     breakdown_json = json.dumps({k: round(v, 0) for k, v in breakdown.items()})
 
     try:
-        existing = db.query(models.NetWorthHistory).filter_by(date=today).first()
-        if existing:
-            existing.value = rounded
-            existing.breakdown = breakdown_json
-        else:
-            db.add(models.NetWorthHistory(date=today, value=rounded, breakdown=breakdown_json))
-        db.commit()
+        NetWorthHistoryRepository(db).upsert(today, rounded, breakdown_json)
         logger.info(f"Net worth snapshot saved: {today} = {rounded:,.0f}")
     except Exception as e:
         logger.error(f"Failed to save net worth snapshot: {e}")

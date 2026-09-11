@@ -31,9 +31,9 @@ def db():
 def mock_exchange_rate():
     """Stub out the live exchange-rate lookup so tests never hit the network.
 
-    ``get_usdt_twd_rate`` is imported in ``asset_repo.py``; patching the
+    ``get_usdt_twd_rate`` is imported in ``asset_service.py``; patching the
     name in that module's namespace is the correct approach.
     """
-    with patch("backend.repositories.asset_repo.get_usdt_twd_rate", return_value=32.0), \
+    with patch("backend.services.asset_service.get_usdt_twd_rate", return_value=32.0), \
          patch("backend.services.analytics_service.get_usdt_twd_rate", return_value=32.0):
         yield

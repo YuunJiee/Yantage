@@ -2,62 +2,98 @@ from datetime import datetime
 from sqlalchemy.orm import Session, joinedload
 
 from .. import models, schemas
-from ..services.exchange_rate_service import get_usdt_twd_rate
-from ..utils.currency import is_usd_denominated
 
 
 class AssetRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    # ── Internal helpers ──────────────────────────────────────────────────────
-
-    def _enrich(self, asset: models.Asset) -> models.Asset:
-        """Compute value_twd, unrealized_pl, roi as transient attributes."""
-        usdt_rate = get_usdt_twd_rate(self.db)
-        is_usd = is_usd_denominated(asset)
-
-        total_qty = sum(t.amount for t in asset.transactions)
-        native_value = (asset.current_price or 0.0) * total_qty
-        asset.value_twd = native_value * usdt_rate if is_usd else native_value
-
-        invested_capital = 0.0
-        for t in asset.transactions:
-            if t.amount > 0:
-                cost = t.amount * (t.buy_price or 0.0)
-                if is_usd:
-                    cost *= usdt_rate
-                invested_capital += cost
-
-        if invested_capital > 0:
-            asset.unrealized_pl = asset.value_twd - invested_capital
-            asset.roi = (asset.unrealized_pl / invested_capital) * 100
-        else:
-            asset.unrealized_pl = 0.0
-            asset.roi = 0.0
-
-        return asset
-
     # ── Asset CRUD ────────────────────────────────────────────────────────────
 
     def get(self, asset_id: int) -> models.Asset | None:
-        asset = (
+        return (
             self.db.query(models.Asset)
             .options(joinedload(models.Asset.transactions))
             .filter(models.Asset.id == asset_id)
             .first()
         )
-        return self._enrich(asset) if asset else None
 
     def list_all(self, skip: int = 0, limit: int = 100) -> list[models.Asset]:
-        assets = (
+        return (
             self.db.query(models.Asset)
             .options(joinedload(models.Asset.transactions))
             .offset(skip)
             .limit(limit)
             .all()
         )
-        return [self._enrich(a) for a in assets]
+
+    def find_by_connection(
+        self,
+        connection_id: int,
+        *,
+        ticker: str | None = None,
+        network: str | None = None,
+        contract_address_is_null: bool | None = None,
+    ) -> models.Asset | None:
+        """Look up an integration-synced asset by its connection + (ticker, or network/contract-address)."""
+        query = (
+            self.db.query(models.Asset)
+            .options(joinedload(models.Asset.transactions))
+            .filter(models.Asset.connection_id == connection_id)
+        )
+        if ticker is not None:
+            query = query.filter(models.Asset.ticker == ticker)
+        if network is not None:
+            query = query.filter(models.Asset.network == network)
+        if contract_address_is_null is True:
+            query = query.filter(models.Asset.contract_address.is_(None))
+        elif contract_address_is_null is False:
+            query = query.filter(models.Asset.contract_address.isnot(None))
+        return query.first()
+
+    def list_by_connection(
+        self,
+        connection_id: int,
+        *,
+        network: str | None = None,
+        contract_address_is_null: bool | None = None,
+    ) -> list[models.Asset]:
+        """Like find_by_connection but returns every match (e.g. all known wallet tokens on a network)."""
+        query = (
+            self.db.query(models.Asset)
+            .options(joinedload(models.Asset.transactions))
+            .filter(models.Asset.connection_id == connection_id)
+        )
+        if network is not None:
+            query = query.filter(models.Asset.network == network)
+        if contract_address_is_null is True:
+            query = query.filter(models.Asset.contract_address.is_(None))
+        elif contract_address_is_null is False:
+            query = query.filter(models.Asset.contract_address.isnot(None))
+        return query.all()
+
+    def record_balance_diff(
+        self,
+        asset: models.Asset,
+        target_qty: float,
+        epsilon: float = 1e-8,
+        touch_last_updated_on_write: bool = False,
+    ) -> bool:
+        """Insert a balancing Transaction so the asset's summed quantity reaches target_qty.
+
+        Returns whether a transaction was actually written (diff exceeded epsilon).
+        """
+        current_qty = sum(t.amount for t in asset.transactions)
+        diff = target_qty - current_qty
+        wrote_diff = abs(diff) > epsilon
+        if wrote_diff:
+            self.db.add(models.Transaction(
+                asset_id=asset.id, amount=diff, buy_price=0, date=datetime.now(), is_transfer=False,
+            ))
+            if touch_last_updated_on_write:
+                asset.last_updated_at = datetime.now()
+        self.db.commit()
+        return wrote_diff
 
     def create(self, data: schemas.AssetCreate) -> models.Asset:
         db_asset = models.Asset(
@@ -109,6 +145,9 @@ class AssetRepository:
         return db_asset
 
     # ── Transaction CRUD ──────────────────────────────────────────────────────
+
+    def get_transaction(self, transaction_id: int) -> models.Transaction | None:
+        return self.db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
 
     def create_transaction(self, transaction: schemas.TransactionCreate, asset_id: int) -> models.Transaction:
         tx_data = transaction.model_dump()

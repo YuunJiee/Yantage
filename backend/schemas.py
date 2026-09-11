@@ -176,6 +176,13 @@ class SystemSetting(SystemSettingBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TickerLookupResult(BaseModel):
+    name: Optional[str] = None
+    symbol: Optional[str] = None
+    price: Optional[float] = None
+    error: Optional[str] = None
+
+
 # --- Integration / Connection schemas ---
 
 class ConnectionCreate(BaseModel):
@@ -215,9 +222,6 @@ class CyclePaymentBase(BaseModel):
     member_id: int
     paid_at: Optional[str] = None
     note: Optional[str] = None
-
-class CyclePaymentCreate(CyclePaymentBase):
-    pass
 
 class CyclePaymentUpdate(BaseModel):
     paid_at: Optional[str] = None

@@ -1,15 +1,13 @@
-import time
-import json
-import hashlib
-import hmac
-import base64
 import requests
 import logging
 from datetime import datetime
 from sqlalchemy.orm import Session
 
 from .base import ExchangeProvider
-from ... import models
+from ... import schemas
+from ...repositories.asset_repo import AssetRepository
+from ...repositories.connection_repo import ConnectionRepository
+from ...utils.hmac_signing import sign_max_request
 from ...utils.icons import get_icon_for_ticker
 
 logger = logging.getLogger(__name__)
@@ -17,35 +15,17 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://max-api.maicoin.com"
 
 
-def _auth_headers(path: str, api_key: str, api_secret: str, params: dict | None = None):
-    nonce = int(time.time() * 1000)
-    payload_data = {'nonce': nonce, 'path': path}
-    if params:
-        payload_data.update(params)
-    payload = base64.b64encode(json.dumps(payload_data).encode()).decode()
-    signature = hmac.new(api_secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
-    headers = {
-        'X-MAX-ACCESSKEY': api_key,
-        'X-MAX-PAYLOAD':   payload,
-        'X-MAX-SIGNATURE': signature,
-        'Content-Type':    'application/json',
-    }
-    return headers, payload_data
-
-
 class MaxProvider(ExchangeProvider):
     def sync(self, db: Session) -> bool:
         logger.info("Starting MAX Sync...")
 
-        connections = db.query(models.CryptoConnection).filter(
-            models.CryptoConnection.provider == 'max',
-            models.CryptoConnection.is_active == True,
-        ).all()
+        connections = ConnectionRepository(db).list_active_by_provider('max')
 
         if not connections:
             logger.info("MAX Sync skipped: No active connections found.")
             return False
 
+        repo = AssetRepository(db)
         success_count = 0
 
         for conn in connections:
@@ -56,7 +36,7 @@ class MaxProvider(ExchangeProvider):
 
             try:
                 path = "/api/v3/wallet/spot/accounts"
-                headers, payload_data = _auth_headers(path, conn.api_key, conn.api_secret)
+                headers, payload_data = sign_max_request(path, conn.api_key, conn.api_secret)
                 query_params = {k: v for k, v in payload_data.items() if k != 'path'}
                 resp = requests.get(f"{BASE_URL}{path}", headers=headers, params=query_params)
 
@@ -108,7 +88,7 @@ class MaxProvider(ExchangeProvider):
                         try:
                             t_path = "/api/v3/wallet/spot/trades"
                             t_params = {'market': f"{ticker.lower()}twd", 'limit': 500}
-                            t_headers, t_payload = _auth_headers(t_path, conn.api_key, conn.api_secret, t_params)
+                            t_headers, t_payload = sign_max_request(t_path, conn.api_key, conn.api_secret, t_params)
                             t_qp = {k: v for k, v in t_payload.items() if k != 'path'}
                             t_resp = requests.get(f"{BASE_URL}{t_path}", headers=t_headers, params=t_qp)
                             if t_resp.status_code == 200:
@@ -127,10 +107,7 @@ class MaxProvider(ExchangeProvider):
                         ticker, "Crypto" if ticker != 'TWD' else "Fluid"
                     )
 
-                    db_asset = db.query(models.Asset).filter(
-                        models.Asset.connection_id == conn.id,
-                        models.Asset.ticker == ticker,
-                    ).first()
+                    db_asset = repo.find_by_connection(conn.id, ticker=ticker)
 
                     if db_asset:
                         if current_price > 0:
@@ -143,34 +120,23 @@ class MaxProvider(ExchangeProvider):
                         if db_asset.icon != target_icon:
                             db_asset.icon = target_icon
 
-                        current_qty = sum(t.amount for t in db_asset.transactions)
-                        diff = amount - current_qty
-                        if abs(diff) > 1e-8:
-                            db.add(models.Transaction(
-                                asset_id=db_asset.id, amount=diff,
-                                buy_price=0, date=datetime.now(), is_transfer=False,
-                            ))
-                        db.commit()
+                        repo.record_balance_diff(db_asset, amount)
                     else:
                         logger.info(f"  Creating new MAX asset: {ticker}")
                         category     = "Fluid"  if ticker == 'TWD' else "Crypto"
                         sub_category = "Cash"   if ticker == 'TWD' else "Crypto"
-                        new_asset = models.Asset(
+                        new_asset = repo.create(schemas.AssetCreate(
                             name=f"{ticker} ({conn.name})",
                             ticker=ticker, category=category, sub_category=sub_category,
                             source="max", icon=target_icon, include_in_net_worth=True,
                             current_price=current_price,
                             manual_avg_cost=avg_cost if avg_cost > 0 else None,
                             connection_id=conn.id,
-                        )
-                        db.add(new_asset)
-                        db.commit()
-                        db.refresh(new_asset)
-                        db.add(models.Transaction(
-                            asset_id=new_asset.id, amount=amount,
-                            buy_price=0, date=datetime.now(), is_transfer=False,
                         ))
-                        db.commit()
+                        repo.create_transaction(
+                            schemas.TransactionCreate(amount=amount, buy_price=0, date=datetime.now(), is_transfer=False),
+                            new_asset.id,
+                        )
 
                 success_count += 1
 

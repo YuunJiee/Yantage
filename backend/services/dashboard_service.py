@@ -2,13 +2,13 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from .. import schemas
-from ..repositories.asset_repo import AssetRepository
+from ..services.asset_service import AssetService
 from ..services.exchange_rate_service import get_usdt_twd_rate
 
 
 def calculate_dashboard_metrics(db: Session) -> schemas.DashboardData:
     usdtwd = get_usdt_twd_rate(db)
-    assets = AssetRepository(db).list_all()
+    assets = AssetService(db).list_all()
 
     total_market_value = 0.0
     total_cost = 0.0

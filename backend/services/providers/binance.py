@@ -1,10 +1,10 @@
 import ccxt
 import logging
-from datetime import datetime
 from sqlalchemy.orm import Session
 
 from .base import ExchangeProvider
-from ... import models
+from .common import sync_asset_balance
+from ...repositories.connection_repo import ConnectionRepository
 from ...utils.icons import get_icon_for_ticker
 from ..exchange_rate_service import get_usdt_twd_rate
 
@@ -15,10 +15,7 @@ class BinanceProvider(ExchangeProvider):
     def sync(self, db: Session) -> bool:
         logger.info("Starting Binance Sync...")
 
-        connections = db.query(models.CryptoConnection).filter(
-            models.CryptoConnection.provider == 'binance',
-            models.CryptoConnection.is_active == True
-        ).all()
+        connections = ConnectionRepository(db).list_active_by_provider('binance')
 
         if not connections:
             logger.info("Binance Sync skipped: No active connections found.")
@@ -62,48 +59,16 @@ class BinanceProvider(ExchangeProvider):
                         all_tickers.get(f"{coin}/USDT", {}).get('last') or 0
                     )
 
-                    db_asset = db.query(models.Asset).filter(
-                        models.Asset.connection_id == conn.id,
-                        models.Asset.ticker == coin,
-                    ).first()
-
-                    target_name = f"{coin} ({clean_conn_name})"
-                    target_icon = get_icon_for_ticker(coin, "Crypto")
-
-                    if db_asset:
-                        db_asset.last_updated_at = datetime.now()
-                        db_asset.name = target_name
-                        if current_price_usd > 0:
-                            db_asset.current_price = current_price_usd
-                        db_asset.sub_category = "Crypto"
-                        if db_asset.icon != target_icon:
-                            db_asset.icon = target_icon
-
-                        current_qty = sum(t.amount for t in db_asset.transactions)
-                        diff = amount - current_qty
-                        if abs(diff) > 1e-8:
-                            db.add(models.Transaction(
-                                asset_id=db_asset.id, amount=diff,
-                                buy_price=0, date=datetime.now(), is_transfer=False,
-                            ))
-                        db.commit()
-                    else:
-                        new_asset = models.Asset(
-                            name=target_name, ticker=coin,
-                            category="Crypto", sub_category="Crypto",
-                            source="binance", icon=target_icon,
-                            include_in_net_worth=True,
-                            current_price=current_price_usd if current_price_usd > 0 else None,
-                            connection_id=conn.id,
-                        )
-                        db.add(new_asset)
-                        db.commit()
-                        db.refresh(new_asset)
-                        db.add(models.Transaction(
-                            asset_id=new_asset.id, amount=amount,
-                            buy_price=0, date=datetime.now(), is_transfer=False,
-                        ))
-                        db.commit()
+                    sync_asset_balance(
+                        db,
+                        connection_id=conn.id,
+                        ticker=coin,
+                        target_name=f"{coin} ({clean_conn_name})",
+                        current_price=current_price_usd,
+                        source="binance",
+                        icon=get_icon_for_ticker(coin, "Crypto"),
+                        amount=amount,
+                    )
 
                 success_count += 1
 
