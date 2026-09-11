@@ -201,6 +201,20 @@ def test_list_goals_survives_a_legacy_non_json_allocation_data(db, client):
     assert res.json()[0]["allocation_data"] == "Stock"
 
 
+def test_list_goals_survives_a_legacy_goal_type_outside_the_enum(db, client):
+    """Confirmed in production: a goal predating the two-value GoalType
+    enum had goal_type='MONTHLY_SPENDING', 500ing GET /api/goals/ even
+    after the allocation_data/target_amount fix above, since goal_type was
+    still strictly typed as the GoalType enum in the response schema."""
+    from backend import models
+    db.add(models.Goal(name="Old Monthly Budget Goal", target_amount=12000, goal_type="MONTHLY_SPENDING"))
+    db.commit()
+
+    res = client.get("/api/goals/")
+    assert res.status_code == 200
+    assert res.json()[0]["goal_type"] == "MONTHLY_SPENDING"
+
+
 def test_list_budget_categories_survives_a_legacy_negative_amount(db, client):
     from backend import models
     db.add(models.BudgetCategory(name="Old Category", budget_amount=-100))

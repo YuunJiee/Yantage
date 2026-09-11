@@ -143,11 +143,19 @@ class Goal(BaseModel):
     response. A pre-existing goal from before that validation existed
     (e.g. legacy allocation_data stored as a bare category string, per the
     frontend's own documented fallback for that exact case) would otherwise
-    fail response-model validation and 500 the entire list endpoint."""
+    fail response-model validation and 500 the entire list endpoint.
+
+    goal_type is `str`, not `GoalType`, for the same reason — confirmed in
+    production: a goal predating the two-value GoalType enum had
+    goal_type='MONTHLY_SPENDING', which 500'd GET /api/goals/ even after
+    the fix above, since this field was still strictly typed. The frontend
+    already renders any goal_type it doesn't recognize as nothing
+    (GoalWidget.tsx returns null for a goal whose type doesn't match either
+    known branch), so this degrades safely."""
     id: int
     name: str
     target_amount: float
-    goal_type: GoalType
+    goal_type: str
     allocation_data: Optional[str] = None
     created_at: datetime
 

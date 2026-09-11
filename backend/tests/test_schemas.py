@@ -267,6 +267,16 @@ def test_goal_response_serializes_legacy_non_json_allocation_data():
     assert goal.allocation_data == "Stock"
 
 
+def test_goal_response_serializes_legacy_goal_type_outside_the_enum():
+    """Confirmed in production: a goal predating the two-value GoalType
+    enum had goal_type='MONTHLY_SPENDING', 500ing GET /api/goals/."""
+    goal = schemas.Goal(
+        id=2, name="Old Monthly Budget Goal", target_amount=12000, goal_type="MONTHLY_SPENDING",
+        allocation_data=None, created_at=datetime.now(),
+    )
+    assert goal.goal_type == "MONTHLY_SPENDING"
+
+
 def test_budget_category_response_serializes_legacy_negative_amount():
     cat = schemas.BudgetCategory(
         id=1, name="Old Category", budget_amount=-100, created_at=datetime.now(),
