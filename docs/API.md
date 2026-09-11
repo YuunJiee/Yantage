@@ -42,14 +42,14 @@ The core resource: things with a value that roll up into net worth.
 |---|---|---|---|
 | GET | `/` | List goals | — → `Goal[]` |
 | POST | `/` | Create a goal (`NET_WORTH` target or `ASSET_ALLOCATION` percentages) | `GoalCreate` → `Goal` |
-| PUT | `/{goal_id}` | Update a goal | `GoalUpdate` → `Goal` |
+| PUT | `/{goal_id}` | Update a goal — `goal_type` is locked after creation (422 if changed; delete + recreate to switch between `NET_WORTH`/`ASSET_ALLOCATION`) | `GoalUpdate` → `Goal` |
 | DELETE | `/{goal_id}` | Delete a goal | — → 204 |
 
 ## Budgets — `/api/budgets`
 
 | Method | Path | Purpose | Body → Response |
 |---|---|---|---|
-| GET | `/categories` | List active budget categories | — → `BudgetCategory[]` |
+| GET | `/categories` | List budget categories | — → `BudgetCategory[]` |
 | POST | `/categories` | Create a category | `BudgetCategoryCreate` → `BudgetCategory` |
 | PUT | `/categories/{category_id}` | Update a category | `BudgetCategoryUpdate` → `BudgetCategory` |
 | DELETE | `/categories/{category_id}` | Delete a category | — → 204 |
@@ -58,7 +58,7 @@ The core resource: things with a value that roll up into net worth.
 
 | Method | Path | Purpose | Body → Response |
 |---|---|---|---|
-| GET | `/items` | List active expected-income items | — → `IncomeItem[]` |
+| GET | `/items` | List expected-income items | — → `IncomeItem[]` |
 | POST | `/items` | Create an income item | `IncomeItemCreate` → `IncomeItem` |
 | PUT | `/items/{item_id}` | Update an income item | `IncomeItemUpdate` → `IncomeItem` |
 | DELETE | `/items/{item_id}` | Delete an income item | — → 204 |
@@ -71,11 +71,12 @@ Tracks shared subscriptions (e.g. a streaming plan) where the user fronts the co
 |---|---|---|---|
 | GET | `/` | List subscriptions with members + cycles + payments nested | — → `Subscription[]` |
 | POST | `/` | Create a subscription (with initial member list) | `SubscriptionCreate` → `Subscription` |
-| PUT | `/{subscription_id}` | Update cost/shares/period | `SubscriptionUpdate` → `Subscription` |
+| PUT | `/{subscription_id}` | Update `name`/`total_cost` only — `total_shares`/`my_shares`/`collection_period_months` are locked after creation (422 if changed; delete + recreate to restructure) | `SubscriptionUpdate` → `Subscription` |
 | DELETE | `/{subscription_id}` | Delete a subscription (cascades members/cycles/payments) | — → 204 |
 | POST | `/{subscription_id}/members` | Add a member to collect payment from | `SubscriptionMemberCreate` → `SubscriptionMember` |
-| DELETE | `/members/{member_id}` | Remove a member | — → 204 |
-| POST | `/{subscription_id}/cycles` | Open a new collection cycle (auto-creates one pending payment per member) | `CollectionCycleCreate` → `CollectionCycle` |
+| PUT | `/members/{member_id}` | Rename a member | `SubscriptionMemberUpdate` → `SubscriptionMember` |
+| DELETE | `/members/{member_id}` | Remove a member (cascades that member's payments across every cycle) | — → 204 |
+| POST | `/{subscription_id}/cycles` | Open a new collection cycle — auto-creates one pending payment per current member, each `amount` computed from the subscription's fields at this moment and then frozen (editing `total_cost` later doesn't retroactively change it) | `CollectionCycleCreate` → `CollectionCycle` |
 | DELETE | `/cycles/{cycle_id}` | Delete a cycle (cascades its payments) | — → 204 |
 | PATCH | `/payments/{payment_id}` | Mark a payment paid/unpaid (`paid_at: null` = unpaid) | `CyclePaymentUpdate` → `CyclePayment` |
 
@@ -105,7 +106,7 @@ Exchange/wallet connections used to auto-sync crypto asset balances.
 | Method | Path | Purpose | Body → Response |
 |---|---|---|---|
 | GET | `/export/csv` | Export all assets as CSV (id/name/ticker/category/quantity/price/value) | — → CSV file |
-| DELETE | `/reset` | **Wipe all data** (transactions, assets, goals, budgets, settings, connections) and reseed `budget_start_day` | — → `{"message": str}` |
+| DELETE | `/reset` | **Wipe all data** — every user-data table (assets, transactions, goals, budgets, income, subscriptions/cycles/payments, net-worth history, connections, settings) — and reseed `budget_start_day` | — → `{"message": str}` |
 | POST | `/refresh` | Manually trigger a price update + net-worth snapshot (same job the scheduler runs nightly) | — → `{"message": str}` |
 
 ---

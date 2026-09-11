@@ -19,7 +19,7 @@ backend/
 ├── schemas.py
 ├── database.py
 ├── main.py
-├── constants.py               # AssetCategory / Provider / GoalType enums — single source of truth
+├── constants.py               # AssetCategory / Provider / GoalType / BudgetGroup enums — single source of truth
 ├── scheduler.py                # per-provider sync jobs derived from services/providers/*.PROVIDERS
 ├── repositories/
 │   ├── base.py               # CrudRepository[ModelT] generic base
@@ -67,11 +67,12 @@ backend/
     ├── icons.py
     ├── math.py
     ├── category_rules.py      # is_negative_category() — replaces 3 duplicated Liabilities checks
+    ├── provider_rules.py      # is_provider_managed() — single guard for "is this asset provider-synced"
     ├── secrets.py             # API-key / settings-value masking
     └── hmac_signing.py        # MAX / Pionex request signing
 ```
 
-See `docs/API.md` for the full endpoint reference grouped by domain.
+See `docs/API.md` for the full endpoint reference grouped by domain, and `docs/specs/` for the per-domain business-rule specs written during the spec-first + TDD rewrite (`settings-system.md`, `assets-transactions.md`, `goals.md`, `budgets-income.md`, `subscriptions.md`) — each documents that domain's data model, business rules, and the explicit decisions behind anything non-obvious; check there before re-deriving behavior from code alone.
 
 Tests live in `backend/tests/` (`python -m pytest backend/tests -q`). `backend/requirements-dev.txt`
 adds pytest/pytest-mock/httpx on top of `requirements.txt` — the `client` fixture in `conftest.py`
