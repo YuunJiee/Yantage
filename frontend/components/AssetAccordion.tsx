@@ -117,8 +117,8 @@ export function AssetAccordion({ category, title, totalAmount, assets, onActionC
                 {/* Color dot */}
                 <div className={cn("w-2 h-2 rounded-full shrink-0", dot)} />
 
-                {/* Title */}
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                {/* Title — uppercase/tracked so it reads as a group label, distinct from item names below */}
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/80 flex items-center gap-1.5">
                     {title}
                 </h3>
 
@@ -139,8 +139,8 @@ export function AssetAccordion({ category, title, totalAmount, assets, onActionC
                             <span className="w-3.5 h-3.5 block [&>svg]:w-3.5 [&>svg]:h-3.5">{actionIcon}</span>
                         </button>
                     )}
-                    {/* Total amount */}
-                    <span className="text-sm font-semibold text-foreground tabular-nums">
+                    {/* Total amount — heavier than item-row amounts so category totals scan first */}
+                    <span className="text-base font-bold text-foreground tabular-nums">
                         {privateMoney(totalAmount, '••••', { minimumFractionDigits: 0 })}
                     </span>
 
