@@ -42,7 +42,7 @@ export function NetWorthHero({ data }: { data: DashboardData }) {
                         ({data.total_roi.toFixed(1)}%)
                     </span>
                 </div>
-                <p className="text-[11px] text-muted-foreground/60 mt-2 tracking-wide">更新於 {formattedTime}</p>
+                <p className="text-[11px] text-muted-foreground/50 mt-4">更新於 {formattedTime}</p>
             </section>
 
             {/* ── Stale Warning ──────────────────────────────── */}
