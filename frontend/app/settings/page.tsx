@@ -74,7 +74,7 @@ export default function SettingsPage() {
 
             <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Yantage</p>
-                <h1 className="text-2xl font-bold tracking-tight">設定</h1>
+                <h1 className="font-display text-2xl font-medium tracking-tight">設定</h1>
             </div>
 
             {/* Quick links */}

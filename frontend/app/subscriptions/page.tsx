@@ -23,7 +23,7 @@ export default function SubscriptionsPage() {
             <div className="flex items-start justify-between">
                 <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Yantage</p>
-                    <h1 className="text-2xl font-bold tracking-tight">分帳訂閱</h1>
+                    <h1 className="font-display text-2xl font-medium tracking-tight">分帳訂閱</h1>
                     {pendingCount > 0 && (
                         <p className="text-xs text-amber-600 mt-1">共 {pendingCount} 筆待收款</p>
                     )}
