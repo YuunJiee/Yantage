@@ -60,7 +60,7 @@ app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=["*"])
 # CORS setup
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost:3000,http://localhost:3001,https://assets.yuunjiee.com"
+    "http://localhost:3000,http://localhost:3001"
 ).split(",")
 
 app.add_middleware(
